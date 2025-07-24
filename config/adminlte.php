@@ -412,13 +412,13 @@ return [
             'submenu' => [
                 [
                     'text' => 'Faktur Penjualan',
-                    'url' => 'admin/faktur-penjualan',
+                    'url' => 'admin/sales/invoices',
                     'icon' => 'fas fa-fw fa-file-invoice',
                     'label_color' => 'success',
                 ],
                 [
                     'text' => 'Retur Penjualan',
-                    'url' => 'admin/retur-penjualan',
+                    'url' => 'admin/sales/returns',
                     'icon' => 'fas fa-fw fa-undo',
                     'label_color' => 'success',
                 ],

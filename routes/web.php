@@ -8,6 +8,8 @@ use App\Http\Controllers\DataMaster\ProductController;
 use App\Http\Controllers\DataMaster\SalesGroupController;
 use App\Http\Controllers\DataMaster\CompanyBranchController;
 use App\Http\Controllers\Stocks\StockController;
+use App\Http\Controllers\Sales\SalesInvoiceController;
+use App\Http\Controllers\Sales\SalesReturnController;
 
 Route::get('/', function () {
     return view('auth.login');
@@ -30,6 +32,8 @@ Route::middleware('auth')->group(function () {
 
         // *Products*
         Route::get('products/datatable', [ProductController::class, 'datatable'])->name('products.datatable');
+        Route::get('admin/stocks/product-options/{product}', [StockController::class, 'getProductOptions']);
+
         Route::resource('products', ProductController::class);
 
         // *Employee Profiles*
@@ -47,8 +51,10 @@ Route::middleware('auth')->group(function () {
         // *Stocks*
         Route::group(['prefix' => 'stocks'], function () {
 
-             // For AJAX requests
+            // For AJAX requests
             Route::get('get-sisa-stok/{product_id}', [StockController::class, 'calculateSisaStok'])->name('stock.get_sisa_stok');
+            Route::get('product-options/{product}', [StockController::class, 'getProductOptions']);
+
 
             Route::get('in', [StockController::class, 'indexIn'])->name('stock.in');
             Route::get('out', [StockController::class, 'indexOut'])->name('stock.out');
@@ -61,8 +67,28 @@ Route::middleware('auth')->group(function () {
             Route::put('{type}/{stock}', [StockController::class, 'update'])->name('stock.update');
             Route::delete('{type}/{stock}', [StockController::class, 'delete'])->name('stock.delete');
             Route::get('{type}/{stock}', [StockController::class, 'show'])->name('stock.show');
+        });
 
-           
+        // *Sales Invoices*
+        Route::group(['prefix' => 'sales'], function () {
+            Route::get('invoices/datatable', [SalesInvoiceController::class, 'datatable'])->name('sales.invoices.datatable');
+
+            //Print
+            Route::get('invoices/{invoice}/print', [SalesInvoiceController::class, 'print'])->name('invoices.print');
+
+
+            Route::resource('invoices', SalesInvoiceController::class);
+
+            // *Sales Returns*
+            Route::get('returns/datatable', [SalesReturnController::class, 'datatable'])->name('sales.returns.datatable');
+            Route::get('returns/{return}/print', [SalesReturnController::class, 'print'])->name('sales.returns.print');
+            Route::get('returns/invoice-products-options/{invoice}', [SalesReturnController::class, 'getInvoiceProductsOptions']);
+            Route::get('returns/filter-invoices', [\App\Http\Controllers\Sales\SalesReturnController::class, 'filterInvoices']);
+
+
+            Route::get('returns/invoice-product-options/{salesInvoiceId}/{productId}', [SalesReturnController::class, 'getReturnProductBatchOptions']);
+
+            Route::resource('returns', SalesReturnController::class);
         });
     });
 });

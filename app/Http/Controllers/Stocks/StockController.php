@@ -157,4 +157,22 @@ class StockController extends Controller
     {
         return $type == 'in' ? 'Stok Masuk' : ($type == 'out' ? 'Stok Keluar' : 'Stok Pemusnahan');
     }
+
+    public function getProductOptions($productId)
+    {
+        $lokasiId = request('lokasi_id');
+        $stocks = \App\Models\Stock::where('product_id', $productId)
+            ->where('type', 'in') // <<--- FILTER ONLY STOCK IN
+            ->where('sisa_stok', '>', 0) // Pastikan stok masih tersedia
+            // ->when($lokasiId, function ($q) use ($lokasiId) {
+            //     $q->where('lokasi_id', $lokasiId);
+            // })
+            ->get();
+
+        return response()->json([
+            'no_seri' => $stocks->pluck('no_seri')->unique()->values(),
+            'tanggal_expired' => $stocks->pluck('tanggal_expired')->unique()->values(),
+            'harga' => optional(\App\Models\Product::find($productId))->harga_umum // or any price field
+        ]);
+    }
 }

@@ -45,6 +45,7 @@ class ProductController extends Controller
 
     public function show(Product $product)
     {
+        $product->load('stocks'); // Load stok terkait
         return view('data_master.products.show', compact('product'));
     }
 
