@@ -1,12 +1,12 @@
 @extends('adminlte::page')
-@section('title', 'Retur Penjualan')
+@section('title', 'Retur Pembelian')
 @section('content_header')
-<h1>Retur Penjualan</h1>
+<h1>Retur Pembelian</h1>
 @stop
 
 @section('content')
 <div class="mb-3">
-    <a href="{{ route('returns.create') }}" class="btn btn-primary"><i class="fa fa-plus"></i> Tambah Retur Penjualan</a>
+    <a href="{{ route('purchases.returns.create') }}" class="btn btn-primary"><i class="fa fa-plus"></i> Tambah Retur Pembelian</a>
 </div>
 <div class="card">
     <div class="card-header d-flex align-items-center">
@@ -22,8 +22,7 @@
                 <tr>
                     <th>Tanggal</th>
                     <th>No Retur</th>
-                    <th>Customer</th>
-                    <th>Sales Group</th>
+                    <th>Supplier</th>
                     <th>Grand Total</th>
                     <th>Total Bayar</th>
                     <th>Sisa Tagihan</th>
@@ -44,7 +43,7 @@
             processing: true,
             serverSide: true,
             ajax: {
-                url: "{{ route('sales.returns.datatable') }}",
+                url: "{{ route('purchases.returns.datatable') }}",
                 data: function(d) {
                     d.periode_awal = $('#periode_awal').val();
                     d.periode_akhir = $('#periode_akhir').val();
@@ -59,12 +58,8 @@
                     name: 'kode'
                 },
                 {
-                    data: 'customer',
-                    name: 'customer'
-                },
-                {
-                    data: 'sales_group',
-                    name: 'sales_group'
+                    data: 'supplier',
+                    name: 'supplier'
                 },
                 {
                     data: 'grand_total',

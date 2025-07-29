@@ -376,13 +376,13 @@ return [
             'submenu' => [
                 [
                     'text' => 'Daftar Stok',
-                    'url' => 'admin/daftar-stok',
+                    'url' => 'admin/stocks/lists',
                     'icon' => 'fas fa-fw fa-boxes',
                     'label_color' => 'success',
                 ],
                 [
                     'text' => 'Kartu Stok',
-                    'url' => 'admin/kartu-stok',
+                    'url' => 'admin/stocks/cards',
                     'icon' => 'fas fa-fw fa-boxes',
                     'label_color' => 'success',
                 ],
@@ -424,7 +424,7 @@ return [
                 ],
                 [
                     'text' => 'Tanda Terima Penjualan',
-                    'url' => 'admin/tanda-terima-penjualan',
+                    'url' => 'admin/sales/receipts',
                     'icon' => 'fas fa-fw fa-receipt',
                     'label_color' => 'success',
                 ],
@@ -442,20 +442,20 @@ return [
             'submenu' => [
                 [
                     'text' => 'Faktur Pembelian',
-                    'url' => 'admin/faktur-pembelian',
+                    'url' => 'admin/purchases/invoices',
                     'icon' => 'fas fa-fw fa-file-invoice',
                     'label_color' => 'success',
                 ],
                 [
                     'text' => 'Retur Pembelian',
-                    'url' => 'admin/retur-pembelian',
+                    'url' => 'admin/purchases/returns',
                     'icon' => 'fas fa-fw fa-undo',
                     'label_color' => 'success',
                 ],
 
                 [
                     'text' => 'Pembayaran Pembelian',
-                    'url' => 'admin/pembayaran-pembelian',
+                    'url' => 'admin/purchases/payments',
                     'icon' => 'fas fa-fw fa-credit-card',
                     'label_color' => 'success',
                 ],

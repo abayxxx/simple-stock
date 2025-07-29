@@ -1,12 +1,11 @@
 @extends('adminlte::page')
-@section('title', 'Retur Penjualan')
+@section('title', 'Daftar Tanda Terima Penjualan')
 @section('content_header')
-<h1>Retur Penjualan</h1>
+<h1>Daftar Tanda Terima Penjualan</h1>
 @stop
-
 @section('content')
 <div class="mb-3">
-    <a href="{{ route('returns.create') }}" class="btn btn-primary"><i class="fa fa-plus"></i> Tambah Retur Penjualan</a>
+    <a href="{{ route('receipts.create') }}" class="btn btn-primary"><i class="fa fa-plus"></i> Tambah Tanda Terima</a>
 </div>
 <div class="card">
     <div class="card-header d-flex align-items-center">
@@ -16,17 +15,17 @@
             <input type="date" id="periode_akhir" class="form-control d-inline-block" style="width:140px">
         </div>
     </div>
-    <div class="card-body p-2 table-responsive">
-        <table class="table table-bordered " id="table-retur">
+    <div class="card-body">
+        <table class="table table-bordered" id="receipts-table">
             <thead>
                 <tr>
+                    <th>No</th>
+                    <th>Kode</th>
                     <th>Tanggal</th>
-                    <th>No Retur</th>
                     <th>Customer</th>
-                    <th>Sales Group</th>
-                    <th>Grand Total</th>
-                    <th>Total Bayar</th>
-                    <th>Sisa Tagihan</th>
+                    <th>Penagih</th>
+                    <th>Total Faktur</th>
+                    <th>Total Retur</th>
                     <th>Aksi</th>
                 </tr>
             </thead>
@@ -37,52 +36,56 @@
 
 @push('js')
 <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
-
 <script>
     $(function() {
-        $('#table-retur').DataTable({
+        $('#receipts-table').DataTable({
             processing: true,
             serverSide: true,
             ajax: {
-                url: "{{ route('sales.returns.datatable') }}",
+                url: "{{ route('sales.receipts.datatable') }}",
                 data: function(d) {
                     d.periode_awal = $('#periode_awal').val();
                     d.periode_akhir = $('#periode_akhir').val();
                 }
             },
             columns: [{
-                    data: 'tanggal',
-                    name: 'tanggal'
+                    data: 'DT_RowIndex',
+                    name: 'DT_RowIndex',
+                    orderable: false,
+                    searchable: false
                 },
                 {
                     data: 'kode',
                     name: 'kode'
                 },
                 {
+                    data: 'tanggal',
+                    name: 'tanggal'
+                },
+                {
                     data: 'customer',
-                    name: 'customer'
+                    name: 'customer.name'
                 },
                 {
-                    data: 'sales_group',
-                    name: 'sales_group'
+                    data: 'collector',
+                    name: 'collector.nama'
                 },
                 {
-                    data: 'grand_total',
-                    name: 'grand_total',
-                    className: 'text-end'
+                    data: 'total_faktur',
+                    name: 'total_faktur',
+                    searchable: false,
+                    orderable: false
                 },
                 {
-                    data: 'total_bayar',
-                    name: 'total_bayar',
-                    className: 'text-end'
-                },
-                {
-                    data: 'sisa_tagihan',
-                    name: 'sisa_tagihan',
+                    data: 'total_retur',
+                    name: 'total_retur',
+                    searchable: false,
+                    orderable: false,
                     className: 'text-end'
                 },
                 {
                     data: 'aksi',
+                    name: 'aksi',
                     orderable: false,
                     searchable: false
                 }
@@ -92,12 +95,12 @@
         // Filter date on change
         $('#periode_awal, #periode_akhir').on('change', function() {
             console.log('Filter date changed');
-            $('#table-retur').DataTable().ajax.reload();
+            $('#receipts-table').DataTable().ajax.reload();
         });
     });
 </script>
 @endpush
 
 @push('css')
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css" />
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
 @endpush

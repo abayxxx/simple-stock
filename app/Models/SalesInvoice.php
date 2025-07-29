@@ -51,4 +51,10 @@ class SalesInvoice extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+
+    // Relasi ke tanda terima
+    public function receiptItems()
+    {
+        return $this->hasMany(SalesReceiptItem::class, 'sales_invoice_id');
+    }
 }

@@ -1,27 +1,26 @@
 <?php
 
-namespace App\Http\Controllers\Sales;
+namespace App\Http\Controllers\Purchases;
 
-use App\Models\SalesReturn;
-use App\Models\SalesReturnItem;
+use App\Models\PurchasesReturn;
+use App\Models\PurchasesReturnItem;
 use App\Models\CompanyProfile;
-use App\Models\SalesGroup;
 use App\Models\Product;
 use App\Models\CompanyBranch;
-use App\Models\SalesInvoice;
+use App\Models\PurchasesInvoice;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
 use App\Http\Controllers\Controller;
 use App\Models\Stock;
 
-class SalesReturnController extends Controller
+class PurchasesReturnController extends Controller
 {
     public function datatable(Request $request)
     {
         $awal  = $request->periode_awal;
         $akhir = $request->periode_akhir;
-        $query = SalesReturn::with('customer', 'salesGroup');
+        $query = PurchasesReturn::with('supplier');
 
         if ($awal && $akhir) {
             $query->whereBetween('tanggal', [$awal, $akhir]);
@@ -29,15 +28,14 @@ class SalesReturnController extends Controller
 
         return DataTables::of($query)
             ->editColumn('tanggal', fn($r) => tanggal_indo($r->tanggal))
-            ->addColumn('customer', fn($r) => $r->customer->name ?? '-')
-            ->addColumn('sales_group', fn($r) => $r->salesGroup->nama ?? '-')
+            ->addColumn('supplier', fn($r) => $r->supplier->name ?? '-')
             ->editColumn('grand_total', fn($r) => number_format($r->grand_total, 2, ',', '.'))
             ->editColumn('total_retur', fn($r) => number_format($r->total_retur, 2, ',', '.'))
             ->editColumn('total_bayar', fn($r) => number_format($r->total_bayar, 2, ',', '.'))
             ->editColumn('sisa_tagihan', fn($r) => number_format($r->sisa_tagihan, 2, ',', '.'))
             ->editColumn('created_at', fn($r) => $r->created_at->format('d M Y H:i'))
             ->addColumn('aksi', function ($r) {
-                return view('sales.returns.partials.aksi', ['row' => $r])->render();
+                return view('purchases.returns.partials.aksi', ['row' => $r])->render();
             })
             ->rawColumns(['grand_total', 'total_retur', 'total_bayar', 'sisa_tagihan', 'aksi'])
             ->make(true);
@@ -45,31 +43,28 @@ class SalesReturnController extends Controller
 
     public function index()
     {
-        $returns = SalesReturn::with('customer', 'salesGroup', 'user')->latest()->paginate(20);
-        return view('sales.returns.index', compact('returns'));
+        $returns = PurchasesReturn::with('supplier', 'user')->latest()->paginate(20);
+        return view('purchases.returns.index', compact('returns'));
     }
 
     public function create()
     {
-        $customers = CompanyProfile::orderBy('name')->get();
-        $salesGroups = SalesGroup::orderBy('nama')->get();
+        $suppliers = CompanyProfile::orderBy('name')->get();
         $products = Product::with('stocks')->whereHas('stocks', function ($q) {
             $q->where('type', 'in');
         })->orderBy('nama')->get();
         $branches = CompanyBranch::orderBy('name')->get();
-        $invoices = SalesInvoice::orderBy('tanggal', 'desc')->get();
-
-        return view('sales.returns.create', compact('customers', 'salesGroups', 'products', 'branches', 'invoices'));
+        $invoices = PurchasesInvoice::orderBy('tanggal', 'desc')->get();
+        return view('purchases.returns.create', compact('suppliers', 'products', 'branches', 'invoices'));
     }
 
     public function store(Request $request)
     {
         $data = $request->validate([
-            'kode' => 'nullable|string|max:50|unique:sales_returns,kode',
+            'kode' => 'nullable|string|max:50|unique:purchases_returns,kode',
             'tanggal' => 'required|date',
             'company_profile_id' => 'required|integer',
-            'sales_invoice_id' => 'nullable|integer',
-            'sales_group_id' => 'nullable|integer',
+            'purchases_invoice_id' => 'nullable|integer',
             'tipe_retur' => 'required|string|max:50',
             'catatan' => 'nullable|string',
             'diskon_faktur' => 'nullable|numeric',
@@ -109,20 +104,20 @@ class SalesReturnController extends Controller
         unset($data['items']);
 
         DB::transaction(function () use ($data, $items, &$retur) {
-            $retur = SalesReturn::create($data + ['user_id' => auth()->id()]);
+            $retur = PurchasesReturn::create($data + ['user_id' => auth()->id()]);
             foreach ($items as $item) {
                 // 1. Insert return item
                 $retur->items()->create($item);
 
-                // 2. Tambahkan stok masuk (karena retur = barang kembali)
+                // 2. Tambahkan stok keluar (karena retur = barang kembali)
                 Stock::create([
                     'product_id'       => $item['product_id'],
-                    'type'             => 'in',
+                    'type'             => 'out',
                     'jumlah'           => $item['qty'],
                     'no_seri'          => $item['no_seri'] ?? null,
                     'tanggal_expired'  => $item['tanggal_expired'] ?? null,
                     'harga_net'        => $item['harga_satuan'],
-                    'catatan'          => "Retur Penjualan (Retur: {$retur->kode})" . (isset($item['catatan']) ? " - {$item['catatan']}" : ''),
+                    'catatan'          => "Retur Pembelian (Retur: {$retur->kode})" . (isset($item['catatan']) ? " - {$item['catatan']}" : ''),
                     'sisa_stok'        => 0, // Akan diupdate setelah ini
                 ]);
                 self::updateAllSisaStok($item['product_id'], $item['no_seri'] ?? null, $item['tanggal_expired'] ?? null);
@@ -130,76 +125,81 @@ class SalesReturnController extends Controller
         });
 
 
-        // Update sales invoice total_return and sisa_tagihan jika ada
-        if ($data['sales_invoice_id']) {
-            $invoice = SalesInvoice::find($data['sales_invoice_id']);
+        // Update purchases invoice total_return and sisa_tagihan jika ada
+        if ($data['purchases_invoice_id']) {
+            $invoice = PurchasesInvoice::find($data['purchases_invoice_id']);
             if ($invoice) {
                 $totalRetur = $retur->grand_total;
-                $invoice->total_retur += $totalRetur;
-                $invoice->sisa_tagihan = max(0, $invoice->grand_total  - $totalRetur);
+                $invoice->total_retur = $totalRetur;
+                $invoice->sisa_tagihan = max(0, $invoice->grand_total - $totalRetur);
                 $invoice->save();
             }
         }
 
-        return redirect()->route('returns.index')->with('success', 'Retur penjualan berhasil dibuat.');
+        return redirect()->route('purchases.returns.index')->with('success', 'Retur pembelian berhasil dibuat.');
     }
 
-    public function show(SalesReturn $return)
+    public function show(PurchasesReturn $return)
     {
-        $return->load('items.product', 'customer', 'salesGroup', 'user', 'salesInvoice');
-        return view('sales.returns.show', compact('return'));
+        $return->load('items.product', 'supplier', 'user', 'purchasesInvoice');
+        return view('purchases.returns.show', compact('return'));
     }
 
-    public function edit(SalesReturn $return)
+    public function edit(PurchasesReturn $return)
     {
-        $customers = CompanyProfile::orderBy('name')->get();
-        $salesGroups = SalesGroup::orderBy('nama')->get();
+        $suppliers = CompanyProfile::orderBy('name')->get();
         $products = Product::with('stocks')->whereHas('stocks', function ($q) {
             $q->where('type', 'in');
         })->orderBy('nama')->get();
         $branches = CompanyBranch::orderBy('name')->get();
-        $invoices = SalesInvoice::orderBy('tanggal', 'desc')->get();
+        $invoices = PurchasesInvoice::orderBy('tanggal', 'desc')->get();
         $return->load('items');
-        return view('sales.returns.edit', compact('return', 'customers', 'salesGroups', 'products', 'branches', 'invoices'));
+        return view('purchases.returns.edit', compact('return', 'suppliers', 'products', 'branches', 'invoices'));
     }
 
-    public function update(Request $request, SalesReturn $return)
+    public function update(Request $request, PurchasesReturn $return)
     {
-        $data = $request->validate([
-            'tanggal' => 'required|date',
-            'company_profile_id' => 'required|integer',
-            'sales_invoice_id' => 'nullable|integer',
-            'sales_group_id' => 'nullable|integer',
-            'tipe_retur' => 'required|string|max:50',
-            'catatan' => 'nullable|string',
-            'diskon_faktur' => 'nullable|numeric',
-            'diskon_ppn' => 'nullable|numeric',
-            'subtotal' => 'nullable|numeric',
-            'grand_total' => 'nullable|numeric',
-            'total_retur' => 'nullable|numeric',
-            'total_bayar' => 'nullable|numeric',
-            'sisa_tagihan' => 'nullable|numeric',
-            // Items array
-            'items' => 'required|array|min:1',
-            'items.*.product_id' => 'required|integer|exists:products,id',
-            'items.*.qty' => 'required|numeric|min:1',
-            'items.*.no_seri' => 'nullable|string|max:50',
-            'items.*.tanggal_expired' => 'nullable|date',
-            'items.*.satuan' => 'nullable|string|max:20',
-            'items.*.harga_satuan' => 'required|numeric',
-            'items.*.diskon_1_persen' => 'nullable|numeric|min:0',
-            'items.*.diskon_1_rupiah' => 'nullable|numeric|min:0',
-            'items.*.diskon_2_persen' => 'nullable|numeric|min:0',
-            'items.*.diskon_2_rupiah' => 'nullable|numeric|min:0',
-            'items.*.diskon_3_persen' => 'nullable|numeric|min:0',
-            'items.*.diskon_3_rupiah' => 'nullable|numeric|min:0',
-            'items.*.sub_total_sblm_disc' => 'nullable|numeric',
-            'items.*.total_diskon_item' => 'nullable|numeric',
-            'items.*.sub_total_sebelum_ppn' => 'nullable|numeric',
-            'items.*.ppn_persen' => 'nullable|numeric',
-            'items.*.sub_total_setelah_disc' => 'nullable|numeric',
-            'items.*.catatan' => 'nullable|string',
-        ]);
+        try {
+            //code...
+            $data = $request->validate([
+                'tanggal' => 'required|date',
+                'company_profile_id' => 'required|integer',
+                'purchases_invoice_id' => 'nullable|integer',
+                'tipe_retur' => 'required|string|max:50',
+                'catatan' => 'nullable|string',
+                'diskon_faktur' => 'nullable|numeric',
+                'diskon_ppn' => 'nullable|numeric',
+                'subtotal' => 'nullable|numeric',
+                'grand_total' => 'nullable|numeric',
+                'total_retur' => 'nullable|numeric',
+                'total_bayar' => 'nullable|numeric',
+                'sisa_tagihan' => 'nullable|numeric',
+                // Items array
+                'items' => 'required|array|min:1',
+                'items.*.product_id' => 'required|integer|exists:products,id',
+                'items.*.qty' => 'required|numeric|min:1',
+                'items.*.no_seri' => 'nullable|string|max:50',
+                'items.*.tanggal_expired' => 'nullable|date',
+                'items.*.satuan' => 'nullable|string|max:20',
+                'items.*.harga_satuan' => 'required|numeric',
+                'items.*.diskon_1_persen' => 'nullable|numeric|min:0',
+                'items.*.diskon_1_rupiah' => 'nullable|numeric|min:0',
+                'items.*.diskon_2_persen' => 'nullable|numeric|min:0',
+                'items.*.diskon_2_rupiah' => 'nullable|numeric|min:0',
+                'items.*.diskon_3_persen' => 'nullable|numeric|min:0',
+                'items.*.diskon_3_rupiah' => 'nullable|numeric|min:0',
+                'items.*.sub_total_sblm_disc' => 'nullable|numeric',
+                'items.*.total_diskon_item' => 'nullable|numeric',
+                'items.*.sub_total_sebelum_ppn' => 'nullable|numeric',
+                'items.*.ppn_persen' => 'nullable|numeric',
+                'items.*.sub_total_setelah_disc' => 'nullable|numeric',
+                'items.*.catatan' => 'nullable|string',
+            ]);
+        } catch (\Throwable $th) {
+            //throw $th;
+            return redirect()->back()->withErrors($th->getMessage())->withInput();
+        }
+
         $items = $data['items'];
         unset($data['items']);
 
@@ -209,7 +209,7 @@ class SalesReturnController extends Controller
             foreach ($oldItems as $old) {
                 Stock::where([
                     'product_id'      => $old->product_id,
-                    'type'            => 'in',
+                    'type'            => 'out',
                     'no_seri'         => $old->no_seri,
                     'tanggal_expired' => $old->tanggal_expired,
                     'harga_net'       => $old->harga_satuan,
@@ -221,27 +221,27 @@ class SalesReturnController extends Controller
             // 2. Update header
             $return->update($data);
 
-            // 3. Tambah item & stok in baru
+            // 3. Tambah item & stok out baru
             foreach ($items as $item) {
                 $return->items()->create($item);
 
                 Stock::create([
                     'product_id'       => $item['product_id'],
-                    'type'             => 'in',
+                    'type'             => 'out',
                     'jumlah'           => $item['qty'],
                     'no_seri'          => $item['no_seri'] ?? null,
                     'tanggal_expired'  => $item['tanggal_expired'] ?? null,
                     'harga_net'        => $item['harga_satuan'],
-                    'catatan'          => "Retur Penjualan (Update: {$return->kode})" . (isset($item['catatan']) ? " - {$item['catatan']}" : ''),
+                    'catatan'          => "Retur Pembelian (Update: {$return->kode})" . (isset($item['catatan']) ? " - {$item['catatan']}" : ''),
                     'sisa_stok'        => 0,
                 ]);
                 self::updateAllSisaStok($item['product_id'], $item['no_seri'] ?? null, $item['tanggal_expired'] ?? null);
             }
         });
 
-        // 4. update sales invoice total_return and sisa_tagihan
-        if ($return->sales_invoice_id) {
-            $invoice = SalesInvoice::find($return->sales_invoice_id);
+        // 4. update purchase invoice total_return and sisa_tagihan
+        if ($return->purchases_invoice_id) {
+            $invoice = PurchasesInvoice::find($return->purchases_invoice_id);
             if ($invoice) {
                 $totalRetur = $return->grand_total;
                 $invoice->total_retur = $totalRetur;
@@ -250,17 +250,17 @@ class SalesReturnController extends Controller
             }
         }
 
-        return redirect()->route('returns.index')->with('success', 'Retur penjualan berhasil diupdate.');
+        return redirect()->route('purchases.returns.index')->with('success', 'Retur pembelian berhasil diupdate.');
     }
 
-    public function destroy(SalesReturn $return)
+    public function destroy(PurchasesReturn $return)
     {
         // Hapus semua item dan stok masuk terkait
         $oldItems = $return->items;
         foreach ($oldItems as $old) {
             Stock::where([
                 'product_id'      => $old->product_id,
-                'type'            => 'in',
+                'type'            => 'out',
                 'no_seri'         => $old->no_seri,
                 'tanggal_expired' => $old->tanggal_expired,
                 'harga_net'       => $old->harga_satuan,
@@ -268,10 +268,9 @@ class SalesReturnController extends Controller
             self::updateAllSisaStok($old->product_id, $old->no_seri, $old->tanggal_expired);
         }
 
-        // Hapus retur dan relasinya
-        // Update sales invoice jika ada
-        if ($return->sales_invoice_id) {
-            $invoice = SalesInvoice::find($return->sales_invoice_id);
+        // Update purchase invoice jika ada
+        if ($return->purchases_invoice_id) {
+            $invoice = PurchasesInvoice::find($return->purchases_invoice_id);
             if ($invoice) {
                 $invoice->total_retur -= $return->grand_total;
                 $invoice->sisa_tagihan = max(0, $invoice->sisa_tagihan + $return->grand_total);
@@ -281,14 +280,14 @@ class SalesReturnController extends Controller
 
         $return->items()->delete();
         $return->delete();
-        return redirect()->route('returns.index')->with('success', 'Retur penjualan berhasil dihapus.');
+        return redirect()->route('purchases.returns.index')->with('success', 'Retur pembelian berhasil dihapus.');
     }
 
     /** Kode retur auto: RT.2507.00001 */
     protected static function generateKode()
     {
         $prefix = 'RT.' . date('ym') . '.';
-        $last = SalesReturn::where('kode', 'like', $prefix . '%')->max('kode');
+        $last = PurchasesReturn::where('kode', 'like', $prefix . '%')->max('kode');
         $urut = $last ? (int)substr($last, 8) + 1 : 1;
         return $prefix . str_pad($urut, 5, '0', STR_PAD_LEFT);
     }
@@ -328,10 +327,10 @@ class SalesReturnController extends Controller
         }
     }
 
-    // In SalesReturnController
+    // In PurchasesReturnController
     public function getInvoiceProductsOptions($invoiceId)
     {
-        $invoice = \App\Models\SalesInvoice::with('items.product')->findOrFail($invoiceId);
+        $invoice = PurchasesInvoice::with('items.product')->findOrFail($invoiceId);
 
         // Get unique products from invoice items
         $products = $invoice->items->map(fn($item) => $item->product)->unique('id');
@@ -345,9 +344,9 @@ class SalesReturnController extends Controller
         ]);
     }
 
-    public function getReturnProductBatchOptions($salesInvoiceId, $productId)
+    public function getReturnProductBatchOptions($purchaseInvoiceId, $productId)
     {
-        $invoice = SalesInvoice::with('items')->findOrFail($salesInvoiceId);
+        $invoice = PurchasesInvoice::with('items')->findOrFail($purchaseInvoiceId);
         $items = $invoice->items->where('product_id', $productId)->values();
 
         return response()->json([
@@ -378,13 +377,11 @@ class SalesReturnController extends Controller
     // Controller
     public function filterInvoices(Request $request)
     {
-        $q = \App\Models\SalesInvoice::with('customer');
-        if ($request->customer_id) {
-            $q->where('company_profile_id', $request->customer_id);
+        $q = PurchasesInvoice::with('supplier');
+        if ($request->supplier_id) {
+            $q->where('company_profile_id', $request->supplier_id);
         }
-        if ($request->sales_group_id) {
-            $q->where('sales_group_id', $request->sales_group_id);
-        }
+
         $invoices = $q->orderBy('tanggal', 'desc')->get();
 
         return response()->json([
@@ -392,16 +389,15 @@ class SalesReturnController extends Controller
                 return [
                     'id' => $inv->id,
                     'kode' => $inv->kode,
-                    'customer_id' => $inv->company_profile_id,
-                    'customer_name' => $inv->customer->name ?? '-',
-                    'sales_group_id' => $inv->sales_group_id,
+                    'supplier_id' => $inv->company_profile_id,
+                    'supplier_name' => $inv->supplier->name ?? '-',
                 ];
             })
         ]);
     }
     public function print($id)
     {
-        $invoice = SalesReturn::with(['customer', 'items.product', 'salesGroup'])->findOrFail($id);
-        return view('sales.returns.print', compact('invoice'));
+        $invoice = PurchasesReturn::with(['supplier', 'items.product'])->findOrFail($id);
+        return view('purchases.returns.print', compact('invoice'));
     }
 }

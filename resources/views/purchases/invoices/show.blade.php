@@ -1,9 +1,9 @@
 @extends('adminlte::page')
 
-@section('title', 'Retur Penjualan')
+@section('title', 'Detail Faktur Pembelian')
 
 @section('content_header')
-<h1>Retur Penjualan</h1>
+<h1>Detail Faktur Pembelian</h1>
 @stop
 
 @section('content')
@@ -11,21 +11,20 @@
     <div class="card-body">
         <div class="mb-3 row">
             <div class="col-md-4">
-                <b>No Faktur Retur:</b> {{ $return->kode }}<br>
-                <b>Tanggal:</b> {{ tanggal_indo($return->tanggal) }}<br>
-                <b>Customer:</b> {{ $return->customer->name ?? '-' }}<br>
-                <b>Sales Group:</b> {{ $return->salesGroup->nama ?? '-' }}<br>
+                <b>No Faktur:</b> {{ $invoice->kode }}<br>
+                <b>Tanggal:</b> {{ tanggal_indo($invoice->tanggal) }}<br>
+                <b>Suplier:</b> {{ $invoice->supplier->name ?? '-' }}<br>
+                <b>Term:</b> {{ $invoice->term }}<br>
             </div>
             <div class="col-md-4">
-                <b>Status:</b> {{ $return->is_tunai ? 'Tunai' : 'Kredit' }}<br>
-                <b>No PO:</b> {{ $return->no_po }}<br>
-
-                <b>Catatan:</b> {{ $return->catatan }}<br>
+                <b>Status:</b> {{ $invoice->is_tunai ? 'Tunai' : 'Non Tunai' }}, {{ $invoice->is_include_ppn ? 'Include PPN' : '' }}, {{ $invoice->is_received ? 'Diterima' : 'Belum Diterima' }}<br>
+                <b>No PO:</b> {{ $invoice->no_order }}<br>
+                <b>Catatan:</b> {{ $invoice->catatan }}<br>
             </div>
         </div>
 
         <div>
-            <a href="{{ route('sales.returns.print', $return->id) }}" target="_blank" class="btn btn-info">
+            <a href="{{ route('purchases.invoices.print', $invoice->id) }}" target="_blank" class="btn btn-info">
                 <i class="fa fa-print"></i> Print / Export
             </a>
         </div>
@@ -52,7 +51,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($return->items as $item)
+                    @foreach($invoice->items as $item)
                     <tr>
                         <td>{{ $item->product->nama ?? '-' }}</td>
                         <td>{{ $item->no_seri }}</td>
@@ -86,16 +85,16 @@
             </table>
         </div>
         <div class="row mt-4 mb-2 g-3">
-            <div class="col-md-3"><b>Subtotal:</b> Rp {{ number_format($return->subtotal,2,',','.') }}</div>
-            <div class="col-md-3"><b>Diskon Item:</b> Rp {{ number_format($return->items->sum('total_diskon_item') ?? 0,2,',','.') }}</div>
-            <div class="col-md-3"><b>Diskon Faktur:</b> {{ $return->diskon_faktur }} %</div>
-            <div class="col-md-3"><b>Diskon PPN:</b> {{ $return->diskon_ppn }} %</div>
-            <div class="col-md-3"><b>Grand Total:</b> Rp {{ number_format($return->grand_total,2,',','.') }}</div>
-            <div class="col-md-3"><b>Total Retur:</b> Rp {{ number_format($return->total_retur,2,',','.') }}</div>
-            <div class="col-md-3"><b>Total Bayar:</b> Rp {{ number_format($return->total_bayar,2,',','.') }}</div>
-            <div class="col-md-3"><b>Sisa Tagihan:</b> Rp {{ number_format($return->sisa_tagihan,2,',','.') }}</div>
+            <div class="col-md-3"><b>Subtotal:</b> Rp {{ number_format($invoice->subtotal,2,',','.') }}</div>
+            <div class="col-md-3"><b>Diskon Item:</b> Rp {{ number_format($invoice->items->sum('total_diskon_item') ?? 0,2,',','.') }}</div>
+            <div class="col-md-3"><b>Diskon Faktur:</b> {{ $invoice->diskon_faktur }} %</div>
+            <div class="col-md-3"><b>Diskon PPN:</b> {{ $invoice->diskon_ppn }} %</div>
+            <div class="col-md-3"><b>Grand Total:</b> Rp {{ number_format($invoice->grand_total,2,',','.') }}</div>
+            <div class="col-md-3"><b>Total Retur:</b> Rp {{ number_format($invoice->total_retur,2,',','.') }}</div>
+            <div class="col-md-3"><b>Total Bayar:</b> Rp {{ number_format($invoice->total_bayar,2,',','.') }}</div>
+            <div class="col-md-3"><b>Sisa Tagihan:</b> Rp {{ number_format($invoice->sisa_tagihan,2,',','.') }}</div>
         </div>
-        <a href="{{ route('returns.index') }}" class="btn btn-secondary mt-4">Kembali</a>
+        <a href="{{ route('purchases.invoices.index') }}" class="btn btn-secondary mt-4">Kembali</a>
     </div>
 </div>
 @stop

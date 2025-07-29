@@ -1,6 +1,6 @@
 @php
 // Selalu ambil old('items') jika validasi gagal, fallback ke $invoice->items (collection), fallback 1 row kosong untuk create.
-$items = old('items', isset($invoice) ? $invoice->items->toArray() : [ [] ]);
+$items = $items ?? old('items', isset($return) ? $return->items->toArray() : [ [] ]);
 @endphp
 
 <div id="items-wrapper">
@@ -20,7 +20,7 @@ $items = old('items', isset($invoice) ? $invoice->items->toArray() : [ [] ]);
                     @endforeach
                 </select>
             </div>
-            <div class="col-md-3 mb-2">
+            <!-- <div class="col-md-3 mb-2">
                 <label>Lokasi</label>
                 <select name="items[{{ $rowIdx }}][lokasi_id]" class="form-control select-lokasi" required>
                     <option value="">-- Pilih Lokasi --</option>
@@ -31,7 +31,7 @@ $items = old('items', isset($invoice) ? $invoice->items->toArray() : [ [] ]);
                     </option>
                     @endforeach
                 </select>
-            </div>
+            </div> -->
             <!-- NO SERI -->
             <div class="col-md-2 mb-2">
                 <label>No Seri</label>
@@ -62,7 +62,6 @@ $items = old('items', isset($invoice) ? $invoice->items->toArray() : [ [] ]);
                         value="{{ old("items.$rowIdx.qty", $item['qty'] ?? '') }}">
                     <span class="input-group-text satuan-box">
                         {{ old("items.$rowIdx.satuan", $item['satuan'] ?? '') ?: 'Satuan' }}
-
 
                     </span>
                 </div>
@@ -241,13 +240,11 @@ $items = old('items', isset($invoice) ? $invoice->items->toArray() : [ [] ]);
 
         // Sisa stok live
         $('#items-wrapper').on('input change', '.select-product, .select-lokasi, .qty-input', function() {
-            console.log('Sisa stok updated');
             let $row = $(this).closest('.item-row');
             let product_id = $row.find('.select-product').val();
             let lokasi_id = $row.find('.select-lokasi').val();
             if (product_id) {
                 $.get("{{ url('admin/stocks/get-sisa-stok') }}/" + product_id + "?lokasi_id=" + lokasi_id, function(res) {
-                    console.log('Sisa stok:', res);
                     $row.find('.sisa-stok-input').val(Number(res) - Number($row.find('.qty-input').val()));
                 });
             } else {
@@ -256,53 +253,86 @@ $items = old('items', isset($invoice) ? $invoice->items->toArray() : [ [] ]);
         });
 
 
-        // Helper to fetch stock info (no_seri, tgl expired) & harga from product
-        function fetchStockData($row) {
-            let productId = $row.find('.select-product').val();
-            let lokasiId = $row.find('.select-lokasi').val();
-            if (!productId) {
-                $row.find('.select-no-seri').html('<option value="">-- Pilih No Seri --</option>');
-                $row.find('.select-tanggal-expired').html('<option value="">-- Pilih Expired --</option>');
-                $row.find('.harga-input').val('');
-                return;
-            }
 
-            // 1. Get stok detail (AJAX: /admin/stocks/product-options/{productId}?lokasi_id=xxx)
-            $.get("{{ url('admin/stocks/product-options') }}/" + productId + "?lokasi_id=" + lokasiId, function(res) {
-                // res = { no_seri: [xxx], tanggal_expired: [xxx], harga: 12345 }
+        let batchesData = {};
+
+        function fetchBatchOptions($row) {
+            let productOptions = $row.find('.select-product');
+            let productId = productOptions.val();
+            let itemsId = productOptions.data('items-id') || null;
+            let purchasesInvoiceId = $('[name="purchases_invoice_id"]').val();
+
+            if (!productId || !purchasesInvoiceId) return;
+
+            $.get("/admin/purchases/returns/invoice-product-options/" + purchasesInvoiceId + "/" + productId, function(res) {
+                batchesData[productId] = res.batches || [];
+
+                // Fill no_seri and tanggal_expired
                 let noSeriOpts = '<option value="">-- Pilih No Seri --</option>';
                 let tglExpOpts = '<option value="">-- Pilih Expired --</option>';
-                if (res.no_seri && res.no_seri.length) {
-                    res.no_seri.forEach(function(n) {
-                        noSeriOpts += `<option value="${n}">${n}</option>`;
-                    });
-                }
-                if (res.tanggal_expired && res.tanggal_expired.length) {
-                    res.tanggal_expired.forEach(function(t) {
-                        tglExpOpts += `<option value="${t}">${t}</option>`;
-                    });
-                }
+                let uniqueNoSeri = [...new Set(res.batches.map(b => b.no_seri))];
+                let uniqueExp = [...new Set(res.batches.map(b => b.tanggal_expired))];
+
+                uniqueNoSeri.forEach(n => {
+                    noSeriOpts += `<option value="${n}">${n}</option>`;
+                });
+                uniqueExp.forEach(t => {
+                    tglExpOpts += `<option value="${t}">${t}</option>`;
+                });
+
+
                 $row.find('.select-no-seri').html(noSeriOpts);
                 $row.find('.select-tanggal-expired').html(tglExpOpts);
-
-                // Harga (ambil dari stock/produk, auto fill kalau kosong)
-                if (res.harga) {
-                    $row.find('.harga-input').val(res.harga);
-                }
             });
         }
 
-        // On change produk/lokasi → fetch no_seri, tgl_expired, harga
-        $('#items-wrapper').on('change', '.select-product, .select-lokasi', function() {
-            fetchStockData($(this).closest('.item-row'));
+        // When both selected, auto-fill harga
+        function fillHargaIfNeeded($row) {
+            let productId = $row.find('.select-product').val();
+            let noSeri = $row.find('.select-no-seri').val();
+            let expired = $row.find('.select-tanggal-expired').val();
+
+            let batch = (batchesData[productId] || []).find(b =>
+                b.no_seri == noSeri && b.tanggal_expired == expired
+            );
+            if (batch) {
+                $row.find('.harga-input').val(batch.harga_satuan).trigger('input'); // Trigger input to recalculate
+                $row.find('.satuan-box').text(batch.satuan_kecil ? batch.satuan_kecil.toUpperCase() : 'Satuan');
+                $row.find('.qty-input').val(batch.qty || 1).trigger('input'); // Set qty to batch qty if available
+                $row.find('.sisa-stok-input').val(batch.sisa_stok || 0).trigger('input');
+                $row.find('.sub-total-sblm-disc').val(batch.sub_total_sblm_disc || 0).trigger('input');
+                $row.find('.total-diskon-item-input').val(batch.total_diskon_item || 0).trigger('input');
+                $row.find('.sub-total-sebelum-ppn-input').val(batch.sub_total_sebelum_ppn || 0).trigger('input');
+                $row.find('.sub-total-setelah-disc-input').val(batch.sub_total_setelah_disc || 0).trigger('input');
+                $row.find('.ppn-persen-input').val(batch.ppn_persen || 0).trigger('input');
+
+                // Update diskon inputs if available
+                for (let i = 1; i <= 3; i++) {
+                    $row.find(`[name="items[${$row.index()}][diskon_${i}_persen]"]`).val(batch[`diskon_${i}_persen`] || 0).trigger('input');
+                    $row.find(`[name="items[${$row.index()}][diskon_${i}_rupiah]"]`).val(batch[`diskon_${i}_rupiah`] || 0).trigger('input');
+                }
+
+            }
+        }
+
+        // Event wiring example
+        $('#items-wrapper').on('change', '.select-product', function() {
+            fetchBatchOptions($(this).closest('.item-row'));
         });
+        $('#items-wrapper').on('change', '.select-no-seri, .select-tanggal-expired', function() {
+            fillHargaIfNeeded($(this).closest('.item-row'));
+        });
+
+        // On change produk/lokasi → fetch no_seri, tgl_expired, harga
+        // $('#items-wrapper').on('change', '.select-product, .select-lokasi', function() {
+        //     fetchStockData($(this).closest('.item-row'));
+        // });
 
         $('#items-wrapper').on('change', '.select-product', function() {
             var $row = $(this).closest('.item-row');
             var satuan = $(this).find('option:selected').data('satuan_kecil') || '';
             $row.find('.satuan-box').text(satuan ? satuan.toUpperCase() : 'Satuan');
             $row.find('input[name$="[satuan]"]').val(satuan); // ✅ update hidden input
-
         });
 
         // On page load (for edit):
@@ -312,7 +342,6 @@ $items = old('items', isset($invoice) ? $invoice->items->toArray() : [ [] ]);
             var satuan = $select.find('option:selected').data('satuan_kecil') || '';
             $row.find('.satuan-box').text(satuan ? satuan.toUpperCase() : 'Satuan');
             $row.find('input[name$="[satuan]"]').val(satuan); // ✅ update hidden input
-
         });
     });
 </script>

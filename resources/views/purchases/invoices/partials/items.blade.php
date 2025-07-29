@@ -20,38 +20,32 @@ $items = old('items', isset($invoice) ? $invoice->items->toArray() : [ [] ]);
                     @endforeach
                 </select>
             </div>
-            <div class="col-md-3 mb-2">
-                <label>Lokasi</label>
-                <select name="items[{{ $rowIdx }}][lokasi_id]" class="form-control select-lokasi" required>
-                    <option value="">-- Pilih Lokasi --</option>
-                    @foreach($branches as $b)
-                    <option value="{{ $b->id }}"
-                        {{ old("items.$rowIdx.lokasi_id", $item['lokasi_id'] ?? '') == $b->id ? 'selected' : '' }}>
-                        {{ $b->name }}
-                    </option>
-                    @endforeach
-                </select>
-            </div>
+
             <!-- NO SERI -->
             <div class="col-md-2 mb-2">
                 <label>No Seri</label>
-                <select name="items[{{ $rowIdx }}][no_seri]" class="form-control select-no-seri">
+                <!-- <select name="items[{{ $rowIdx }}][no_seri]" class="form-control select-no-seri">
                     <option value="">-- Pilih No Seri --</option>
                     @if(!empty($item['product_id']))
                     {{-- Opsional: server-side generate selected no_seri for edit --}}
                     <option value="{{ $item['no_seri'] }}" selected>{{ $item['no_seri'] }}</option>
                     @endif
-                </select>
+                </select> -->
+                <input type="text" name="items[{{ $rowIdx }}][no_seri]" class="form-control" value="{{ old("items.$rowIdx.no_seri", $item['no_seri'] ?? '') }}">
             </div>
             <!-- TGL EXPIRED -->
             <div class="col-md-2 mb-2">
                 <label>Expired</label>
-                <select name="items[{{ $rowIdx }}][tanggal_expired]" class="form-control select-tanggal-expired">
+                <!-- <select name="items[{{ $rowIdx }}][tanggal_expired]" class="form-control select-tanggal-expired">
                     <option value="">-- Pilih Expired --</option>
                     @if(!empty($item['tanggal_expired']))
                     <option value="{{ $item['tanggal_expired'] }}" selected>{{ $item['tanggal_expired'] }}</option>
                     @endif
-                </select>
+                </select> -->
+
+                <input type="date" name="items[{{ $rowIdx }}][tanggal_expired]"
+                    class="form-control select-tanggal-expired"
+                    value="{{ old("items.$rowIdx.tanggal_expired", $item['tanggal_expired'] ?? '') }}">
             </div>
         </div>
         <div class="row">
@@ -63,12 +57,12 @@ $items = old('items', isset($invoice) ? $invoice->items->toArray() : [ [] ]);
                     <span class="input-group-text satuan-box">
                         {{ old("items.$rowIdx.satuan", $item['satuan'] ?? '') ?: 'Satuan' }}
 
-
                     </span>
                 </div>
             </div>
             <input name="items[{{ $rowIdx }}][satuan]" type="hidden"
                 value="{{ old("items.$rowIdx.satuan", $item['satuan'] ?? '') }}">
+
             <div class="col-md-2 mb-2">
                 <label>Harga</label>
                 <input name="items[{{ $rowIdx }}][harga_satuan]" type="number" step="0.01"
@@ -247,8 +241,7 @@ $items = old('items', isset($invoice) ? $invoice->items->toArray() : [ [] ]);
             let lokasi_id = $row.find('.select-lokasi').val();
             if (product_id) {
                 $.get("{{ url('admin/stocks/get-sisa-stok') }}/" + product_id + "?lokasi_id=" + lokasi_id, function(res) {
-                    console.log('Sisa stok:', res);
-                    $row.find('.sisa-stok-input').val(Number(res) - Number($row.find('.qty-input').val()));
+                    $row.find('.sisa-stok-input').val(Number(res) + Number($row.find('.qty-input').val()));
                 });
             } else {
                 $row.find('.sisa-stok-input').val(0);
@@ -257,45 +250,45 @@ $items = old('items', isset($invoice) ? $invoice->items->toArray() : [ [] ]);
 
 
         // Helper to fetch stock info (no_seri, tgl expired) & harga from product
-        function fetchStockData($row) {
-            let productId = $row.find('.select-product').val();
-            let lokasiId = $row.find('.select-lokasi').val();
-            if (!productId) {
-                $row.find('.select-no-seri').html('<option value="">-- Pilih No Seri --</option>');
-                $row.find('.select-tanggal-expired').html('<option value="">-- Pilih Expired --</option>');
-                $row.find('.harga-input').val('');
-                return;
-            }
+        // function fetchStockData($row) {
+        //     let productId = $row.find('.select-product').val();
+        //     let lokasiId = $row.find('.select-lokasi').val();
+        //     if (!productId) {
+        //         $row.find('.select-no-seri').html('<option value="">-- Pilih No Seri --</option>');
+        //         $row.find('.select-tanggal-expired').html('<option value="">-- Pilih Expired --</option>');
+        //         $row.find('.harga-input').val('');
+        //         return;
+        //     }
 
-            // 1. Get stok detail (AJAX: /admin/stocks/product-options/{productId}?lokasi_id=xxx)
-            $.get("{{ url('admin/stocks/product-options') }}/" + productId + "?lokasi_id=" + lokasiId, function(res) {
-                // res = { no_seri: [xxx], tanggal_expired: [xxx], harga: 12345 }
-                let noSeriOpts = '<option value="">-- Pilih No Seri --</option>';
-                let tglExpOpts = '<option value="">-- Pilih Expired --</option>';
-                if (res.no_seri && res.no_seri.length) {
-                    res.no_seri.forEach(function(n) {
-                        noSeriOpts += `<option value="${n}">${n}</option>`;
-                    });
-                }
-                if (res.tanggal_expired && res.tanggal_expired.length) {
-                    res.tanggal_expired.forEach(function(t) {
-                        tglExpOpts += `<option value="${t}">${t}</option>`;
-                    });
-                }
-                $row.find('.select-no-seri').html(noSeriOpts);
-                $row.find('.select-tanggal-expired').html(tglExpOpts);
+        //     // 1. Get stok detail (AJAX: /admin/stocks/product-options/{productId}?lokasi_id=xxx)
+        //     $.get("{{ url('admin/stocks/product-options') }}/" + productId + "?lokasi_id=" + lokasiId, function(res) {
+        //         // res = { no_seri: [xxx], tanggal_expired: [xxx], harga: 12345 }
+        //         let noSeriOpts = '<option value="">-- Pilih No Seri --</option>';
+        //         let tglExpOpts = '<option value="">-- Pilih Expired --</option>';
+        //         if (res.no_seri && res.no_seri.length) {
+        //             res.no_seri.forEach(function(n) {
+        //                 noSeriOpts += `<option value="${n}">${n}</option>`;
+        //             });
+        //         }
+        //         if (res.tanggal_expired && res.tanggal_expired.length) {
+        //             res.tanggal_expired.forEach(function(t) {
+        //                 tglExpOpts += `<option value="${t}">${t}</option>`;
+        //             });
+        //         }
+        //         $row.find('.select-no-seri').html(noSeriOpts);
+        //         $row.find('.select-tanggal-expired').html(tglExpOpts);
 
-                // Harga (ambil dari stock/produk, auto fill kalau kosong)
-                if (res.harga) {
-                    $row.find('.harga-input').val(res.harga);
-                }
-            });
-        }
+        //         // Harga (ambil dari stock/produk, auto fill kalau kosong)
+        //         if (res.harga) {
+        //             $row.find('.harga-input').val(res.harga);
+        //         }
+        //     });
+        // }
 
-        // On change produk/lokasi → fetch no_seri, tgl_expired, harga
-        $('#items-wrapper').on('change', '.select-product, .select-lokasi', function() {
-            fetchStockData($(this).closest('.item-row'));
-        });
+        // // On change produk/lokasi → fetch no_seri, tgl_expired, harga
+        // $('#items-wrapper').on('change', '.select-product, .select-lokasi', function() {
+        //     fetchStockData($(this).closest('.item-row'));
+        // });
 
         $('#items-wrapper').on('change', '.select-product', function() {
             var $row = $(this).closest('.item-row');

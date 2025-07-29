@@ -62,11 +62,12 @@ $items = $items ?? old('items', isset($return) ? $return->items->toArray() : [ [
                         value="{{ old("items.$rowIdx.qty", $item['qty'] ?? '') }}">
                     <span class="input-group-text satuan-box">
                         {{ old("items.$rowIdx.satuan", $item['satuan'] ?? '') ?: 'Satuan' }}
-                        <input name="items[{{ $rowIdx }}][satuan]" type="hidden"
-                            value="{{ old("items.$rowIdx.satuan", $item['satuan'] ?? '') }}">
+
                     </span>
                 </div>
             </div>
+            <input name="items[{{ $rowIdx }}][satuan]" type="hidden"
+                value="{{ old("items.$rowIdx.satuan", $item['satuan'] ?? '') }}">
             <div class="col-md-2 mb-2">
                 <label>Harga</label>
                 <input name="items[{{ $rowIdx }}][harga_satuan]" type="number" step="0.01"
@@ -332,6 +333,8 @@ $items = $items ?? old('items', isset($return) ? $return->items->toArray() : [ [
             var $row = $(this).closest('.item-row');
             var satuan = $(this).find('option:selected').data('satuan_kecil') || '';
             $row.find('.satuan-box').text(satuan ? satuan.toUpperCase() : 'Satuan');
+            $row.find('input[name$="[satuan]"]').val(satuan); // ✅ update hidden input
+
         });
 
         // On page load (for edit):
@@ -340,6 +343,8 @@ $items = $items ?? old('items', isset($return) ? $return->items->toArray() : [ [
             var $select = $row.find('.select-product');
             var satuan = $select.find('option:selected').data('satuan_kecil') || '';
             $row.find('.satuan-box').text(satuan ? satuan.toUpperCase() : 'Satuan');
+            $row.find('input[name$="[satuan]"]').val(satuan); // ✅ update hidden input
+
         });
     });
 </script>

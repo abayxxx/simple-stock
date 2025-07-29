@@ -1,9 +1,9 @@
 @extends('adminlte::page')
 
-@section('title', 'Faktur Penjualan')
+@section('title', 'Faktur Pembelian')
 
 @section('content_header')
-<h1>Daftar Faktur Penjualan</h1>
+<h1>Daftar Faktur Pembelian</h1>
 @stop
 
 @section('content')
@@ -11,10 +11,10 @@
 <div class="alert alert-success">{{ session('success') }}</div>
 @endif
 <div class="mb-3">
-    <a href="{{ route('invoices.create') }}" class="btn btn-primary"><i class="fa fa-plus"></i> Tambah Tanda Terima</a>
+    <a href="{{ route('purchases.invoices.create') }}" class="btn btn-primary"><i class="fa fa-plus"></i> Tambah Tanda Terima</a>
 </div>
 <div class="card shadow">
-    <div class="card-header d-flex align-items-center">
+    <div class="card-header d-flex align-items-center justify-content-between">
         <div>
             <input type="date" id="periode_awal" class="form-control d-inline-block" style="width:140px">
             s/d
@@ -27,9 +27,7 @@
                 <tr>
                     <th>TANGGAL</th>
                     <th>NO.</th>
-                    <th>NAMA</th>
-                    <th>JATUH TEMPO</th>
-                    <th>NAMA SG</th>
+                    <th>SUPPLIER</th>
                     <th>GRAND TOTAL</th>
                     <th>RETUR</th>
                     <th>PEMBAYARAN</th>
@@ -40,13 +38,14 @@
             </thead>
             <tfoot class="bg-light">
                 <tr>
-                    <th colspan="5" class="text-end">TOTAL</th>
+                    <th colspan="3" class="text-end">TOTAL</th>
                     <th id="footer-grandtotal" class="text-end"></th>
                     <th id="footer-retur" class="text-end"></th>
                     <th id="footer-bayar" class="text-end"></th>
                     <th id="footer-sisa" class="text-end"></th>
                     <th></th>
                     <th></th>
+
                 </tr>
             </tfoot>
         </table>
@@ -64,7 +63,7 @@
             processing: true,
             serverSide: true,
             ajax: {
-                url: "{{ route('sales.invoices.datatable') }}",
+                url: "{{ route('purchases.invoices.datatable') }}",
                 data: function(d) {
                     d.periode_awal = $('#periode_awal').val();
                     d.periode_akhir = $('#periode_akhir').val();
@@ -92,20 +91,11 @@
                     width: '11%'
                 },
                 {
-                    data: 'customer',
+                    data: 'supplier',
                     className: 'align-middle',
                     width: '17%'
                 },
-                {
-                    data: 'jatuh_tempo',
-                    className: 'text-center align-middle',
-                    width: '9%'
-                },
-                {
-                    data: 'sales_group',
-                    className: 'text-center align-middle',
-                    width: '8%'
-                },
+
                 {
                     data: 'grand_total',
                     className: 'text-end align-middle fw-bold',
@@ -143,10 +133,10 @@
             drawCallback: function(settings) {
                 // Footer summary total
                 let api = this.api();
-                let colGrand = 5,
-                    colRetur = 6,
-                    colBayar = 7,
-                    colSisa = 8;
+                let colGrand = 3,
+                    colRetur = 4,
+                    colBayar = 5,
+                    colSisa = 6;
 
                 function intVal(i) {
                     if (typeof i === 'string') {

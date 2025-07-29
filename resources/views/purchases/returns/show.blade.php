@@ -1,9 +1,9 @@
 @extends('adminlte::page')
 
-@section('title', 'Retur Penjualan')
+@section('title', 'Retur Pembelian')
 
 @section('content_header')
-<h1>Retur Penjualan</h1>
+<h1>Retur Pembelian</h1>
 @stop
 
 @section('content')
@@ -13,19 +13,18 @@
             <div class="col-md-4">
                 <b>No Faktur Retur:</b> {{ $return->kode }}<br>
                 <b>Tanggal:</b> {{ tanggal_indo($return->tanggal) }}<br>
-                <b>Customer:</b> {{ $return->customer->name ?? '-' }}<br>
-                <b>Sales Group:</b> {{ $return->salesGroup->nama ?? '-' }}<br>
+                <b>Supplier:</b> {{ $return->supplier->name ?? '-' }}<br>
             </div>
             <div class="col-md-4">
                 <b>Status:</b> {{ $return->is_tunai ? 'Tunai' : 'Kredit' }}<br>
-                <b>No PO:</b> {{ $return->no_po }}<br>
+                <b>No Order:</b> {{ $return->no_order }}<br>
 
                 <b>Catatan:</b> {{ $return->catatan }}<br>
             </div>
         </div>
 
         <div>
-            <a href="{{ route('sales.returns.print', $return->id) }}" target="_blank" class="btn btn-info">
+            <a href="{{ route('purchases.returns.print', $return->id) }}" target="_blank" class="btn btn-info">
                 <i class="fa fa-print"></i> Print / Export
             </a>
         </div>
