@@ -35,12 +35,6 @@ return new class extends Migration
 
             $table->string('catatan')->nullable();
 
-            // Kolom hasil kalkulasi
-            $table->decimal('sub_total_sblm_disc', 20, 2)->default(0)->nullable();       // Sebelum diskon
-            $table->decimal('total_diskon_item', 20, 2)->default(0)->nullable();         // Total diskon (semua)
-            $table->decimal('sub_total_sebelum_ppn', 20, 2)->default(0)->nullable();     // Setelah diskon, sebelum PPN
-            $table->decimal('ppn_persen', 5, 2)->default(0)->nullable();                 // PPN %
-            $table->decimal('sub_total_setelah_disc', 20, 2)->default(0)->nullable();    // Setelah diskon + PPN
 
             $table->timestamps();
         });
