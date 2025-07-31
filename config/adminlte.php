@@ -430,7 +430,7 @@ return [
                 ],
                 [
                     'text' => 'Pembayaran Penjualan',
-                    'url' => 'admin/pembayaran-penjualan',
+                    'url' => 'admin/sales/payments',
                     'icon' => 'fas fa-fw fa-credit-card',
                     'label_color' => 'success',
                 ],

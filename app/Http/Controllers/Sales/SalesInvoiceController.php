@@ -160,7 +160,7 @@ class SalesInvoiceController extends Controller
             }
         });
 
-        return redirect()->route('invoices.index')->with('success', 'Faktur penjualan berhasil dibuat.');
+        return redirect()->route('sales.invoices.index')->with('success', 'Faktur penjualan berhasil dibuat.');
     }
 
     public function show(SalesInvoice $invoice)
@@ -285,7 +285,7 @@ class SalesInvoiceController extends Controller
             }
         });
 
-        return redirect()->route('invoices.index')->with('success', 'Faktur penjualan berhasil diupdate.');
+        return redirect()->route('sales.invoices.index')->with('success', 'Faktur penjualan berhasil diupdate.');
     }
 
     public function destroy(SalesInvoice $invoice)
@@ -294,7 +294,7 @@ class SalesInvoiceController extends Controller
         $invoice->items()->delete();
         //Hapus faktur
         $invoice->delete();
-        return redirect()->route('invoices.index')->with('success', 'Faktur penjualan berhasil dihapus.');
+        return redirect()->route('sales.invoices.index')->with('success', 'Faktur penjualan berhasil dihapus.');
     }
 
     protected static function generateKode()

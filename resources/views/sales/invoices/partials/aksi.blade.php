@@ -1,11 +1,11 @@
 <div class="btn-group btn-group-sm" role="group">
-    <a href="{{ route('invoices.show', $row->id) }}" class="btn btn-info" title="Detail">
+    <a href="{{ route('sales.invoices.show', $row->id) }}" class="btn btn-info" title="Detail">
         <i class="fa fa-eye"></i>
     </a>
-    <a href="{{ route('invoices.edit', $row->id) }}" class="btn btn-warning" title="Edit">
+    <a href="{{ route('sales.invoices.edit', $row->id) }}" class="btn btn-warning" title="Edit">
         <i class="fa fa-edit"></i>
     </a>
-    <form action="{{ route('invoices.destroy', $row->id) }}" method="POST" class="d-inline"
+    <form action="{{ route('sales.invoices.destroy', $row->id) }}" method="POST" class="d-inline"
         onsubmit="return confirm('Yakin ingin hapus data?')">
         @csrf
         @method('DELETE')

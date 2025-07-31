@@ -1,7 +1,7 @@
 @extends('adminlte::page')
 @section('title', 'Detail Tanda Terima Penjualan')
 @section('content_header')
-    <h1>Detail Tanda Terima Penjualan</h1>
+<h1>Detail Tanda Terima Penjualan</h1>
 @stop
 @section('content')
 <div class="card">
@@ -50,12 +50,12 @@
                     <th class="text-end" colspan="4">Total Diterima</th>
                     <td class="text-end total-diterima" colspan="2">{{ number_format($receipt->total_faktur, 2, ',', '.') }}</td>
                 </tr>
-     
+
 
             </tbody>
         </table>
         <div class="mt-4">
-            <a href="{{ route('receipts.index') }}" class="btn btn-secondary">Kembali</a>
+            <a href="{{ route('sales.receipts.index') }}" class="btn btn-secondary">Kembali</a>
         </div>
     </div>
 </div>

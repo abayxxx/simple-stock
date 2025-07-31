@@ -9,7 +9,7 @@
 @section('content')
 <div class="card">
     <div class="card-body">
-        <form method="POST" action="{{ route('invoices.update', $invoice->id) }}">
+        <form method="POST" action="{{ route('sales.invoices.update', $invoice->id) }}">
             @csrf
             @method('PUT')
             @include('sales.invoices.partials.form', [
@@ -30,7 +30,7 @@
             @endif
             <div class="mt-3">
                 <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Update</button>
-                <a href="{{ route('invoices.index') }}" class="btn btn-secondary">Kembali</a>
+                <a href="{{ route('sales.invoices.index') }}" class="btn btn-secondary">Kembali</a>
             </div>
         </form>
     </div>

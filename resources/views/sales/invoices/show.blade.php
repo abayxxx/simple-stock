@@ -98,7 +98,7 @@
             <div class="col-md-3"><b>Total Bayar:</b> Rp {{ number_format($invoice->total_bayar,2,',','.') }}</div>
             <div class="col-md-3"><b>Sisa Tagihan:</b> Rp {{ number_format($invoice->sisa_tagihan,2,',','.') }}</div>
         </div>
-        <a href="{{ route('invoices.index') }}" class="btn btn-secondary mt-4">Kembali</a>
+        <a href="{{ route('sales.invoices.index') }}" class="btn btn-secondary mt-4">Kembali</a>
     </div>
 </div>
 @stop

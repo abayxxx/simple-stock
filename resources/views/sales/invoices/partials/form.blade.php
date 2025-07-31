@@ -114,48 +114,57 @@
     });
 
     function updateSummary() {
-        let subtotal = 0;
-        let totalDiskonItem = 0;
-        let subtotalSebelumPPN = 0;
-        let totalPPN = 0;
-        let grandTotal = 0;
+    let subtotal = 0;
+    let totalDiskonItem = 0;
+    let subtotalSebelumPPN = 0;
+    let totalPPN = 0;
+    let grandTotal = 0;
 
-        // Loop setiap item-row
-        $('#items-wrapper .item-row').each(function() {
-            let $row = $(this);
-            subtotal += parseFloat($row.find('.sub-total-sblm-disc').val()) || 0;
-            totalDiskonItem += parseFloat($row.find('.total-diskon-item-input').val()) || 0;
-            subtotalSebelumPPN += parseFloat($row.find('.sub-total-sebelum-ppn-input').val()) || 0;
-            grandTotal += parseFloat($row.find('.sub-total-setelah-disc-input').val()) || 0;
-            // Jika ingin hitung total PPN saja:
-            let ppnPerItem = parseFloat($row.find('.sub-total-setelah-disc-input').val() || 0) - parseFloat($row.find('.sub-total-sebelum-ppn-input').val() || 0);
-            totalPPN += ppnPerItem;
-        });
+    // Loop semua baris di tabel (setiap item yang akan disubmit)
+    $('#review-items-table tbody tr').each(function() {
+        let idx = $(this).data('index');
+        // Cari input hidden sesuai index
+        // (field names: sub_total_sblm_disc, total_diskon_item, sub_total_sebelum_ppn, sub_total_setelah_disc)
+        let prefix = `items[${idx}]`;
 
-        // Ambil diskon faktur & PPN tambahan (jika diisi user)
-        let diskonFaktur = parseFloat($('[name="diskon_faktur"]').val()) || 0;
-        let diskonPPN = parseFloat($('[name="diskon_ppn"]').val()) || 0;
+        subtotal += parseFloat($(`[name="${prefix}[sub_total_sblm_disc]"]`).val()) || 0;
+        totalDiskonItem += parseFloat($(`[name="${prefix}[total_diskon_item]"]`).val()) || 0;
+        subtotalSebelumPPN += parseFloat($(`[name="${prefix}[sub_total_sebelum_ppn]"]`).val()) || 0;
+        let subTotalSetelahDisc = parseFloat($(`[name="${prefix}[sub_total_setelah_disc]"]`).val()) || 0;
+        let subTotalSblmPPN = parseFloat($(`[name="${prefix}[sub_total_sebelum_ppn]"]`).val()) || 0;
+        grandTotal += subTotalSetelahDisc;
 
-        // Hitung grand total setelah diskon faktur dan diskon ppn (jika ada)
-        let grandTotalWithDiskon = grandTotal - (grandTotal * (diskonFaktur / 100)) + (grandTotal * (diskonPPN / 100));
+        let ppnPerItem = subTotalSetelahDisc - subTotalSblmPPN;
+        totalPPN += ppnPerItem;
+    });
 
-        // Hitung total bayar (default = grandTotalWithDiskon)
-        let sisaTagihan = grandTotalWithDiskon
+    // Ambil diskon faktur & PPN tambahan (jika diisi user)
+    let diskonFaktur = parseFloat($('[name="diskon_faktur"]').val()) || 0;
+    let diskonPPN = parseFloat($('[name="diskon_ppn"]').val()) || 0;
 
-        // Set value ke summary
-        $('[name="subtotal"]').val(subtotal.toFixed(2));
-        $('[name="diskon_item"]').val(totalDiskonItem.toFixed(2));
-        $('[name="subtotal_sebelum_ppn"]').val(subtotalSebelumPPN.toFixed(2));
-        $('[name="grand_total"]').val(grandTotalWithDiskon.toFixed(2));
-        $('[name="total_bayar"]').val(0);
-        $('[name="sisa_tagihan"]').val(sisaTagihan.toFixed(2));
+    // Hitung grand total setelah diskon faktur dan diskon ppn (jika ada)
+    let grandTotalWithDiskon = grandTotal - (grandTotal * (diskonFaktur / 100)) + (grandTotal * (diskonPPN / 100));
+
+    // Hitung total bayar (default = grandTotalWithDiskon)
+    let sisaTagihan = grandTotalWithDiskon;
+
+    // Set value ke summary
+    $('[name="subtotal"]').val(subtotal.toFixed(2));
+    $('[name="diskon_item"]').val(totalDiskonItem.toFixed(2));
+    $('[name="subtotal_sebelum_ppn"]').val(subtotalSebelumPPN.toFixed(2));
+    $('[name="grand_total"]').val(grandTotalWithDiskon.toFixed(2));
+    $('[name="total_bayar"]').val(0);
+    $('[name="sisa_tagihan"]').val(sisaTagihan.toFixed(2));
     }
 
-    // Trigger summary update setiap ada perubahan di item atau summary field
-    $('#items-wrapper').on('input keyup change', 'input, select', updateSummary);
+
+//    // Panggil updateSummary setiap ada perubahan di tabel item (add/remove), atau di field summary
+//     $('#review-items-table, #hidden-inputs-container').on('DOMSubtreeModified', updateSummary);
+// // Juga jika diskon faktur, diskon ppn, atau total_bayar berubah
     $('[name="diskon_faktur"], [name="diskon_ppn"], [name="total_bayar"]').on('input keyup change', updateSummary);
 
-    // Panggil pertama kali saat page ready
+// Panggil pertama kali
     updateSummary();
+
 </script>
 @endpush

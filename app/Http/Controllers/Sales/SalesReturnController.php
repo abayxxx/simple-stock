@@ -141,7 +141,7 @@ class SalesReturnController extends Controller
             }
         }
 
-        return redirect()->route('returns.index')->with('success', 'Retur penjualan berhasil dibuat.');
+        return redirect()->route('sales.returns.index')->with('success', 'Retur penjualan berhasil dibuat.');
     }
 
     public function show(SalesReturn $return)
@@ -250,7 +250,7 @@ class SalesReturnController extends Controller
             }
         }
 
-        return redirect()->route('returns.index')->with('success', 'Retur penjualan berhasil diupdate.');
+        return redirect()->route('sales.returns.index')->with('success', 'Retur penjualan berhasil diupdate.');
     }
 
     public function destroy(SalesReturn $return)
@@ -281,7 +281,7 @@ class SalesReturnController extends Controller
 
         $return->items()->delete();
         $return->delete();
-        return redirect()->route('returns.index')->with('success', 'Retur penjualan berhasil dihapus.');
+        return redirect()->route('sales.returns.index')->with('success', 'Retur penjualan berhasil dihapus.');
     }
 
     /** Kode retur auto: RT.2507.00001 */

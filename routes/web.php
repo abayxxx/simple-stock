@@ -16,6 +16,7 @@ use App\Http\Controllers\Purchases\PurchasesReturnController;
 use App\Http\Controllers\Purchases\PurchasesPaymentController;
 use App\Http\Controllers\Stocks\StockListController;
 use App\Http\Controllers\Stocks\StockCardController;
+use App\Http\Controllers\Sales\SalesPaymentController;
 
 Route::get('/', function () {
     return view('auth.login');
@@ -85,8 +86,8 @@ Route::middleware('auth')->group(function () {
         });
 
         // *Sales Invoices*
-        Route::group(['prefix' => 'sales'], function () {
-            Route::get('invoices/datatable', [SalesInvoiceController::class, 'datatable'])->name('sales.invoices.datatable');
+        Route::group(['prefix' => 'sales', 'as' => 'sales.'], function () {
+            Route::get('invoices/datatable', [SalesInvoiceController::class, 'datatable'])->name('invoices.datatable');
 
             //Print
             Route::get('invoices/{invoice}/print', [SalesInvoiceController::class, 'print'])->name('invoices.print');
@@ -95,22 +96,27 @@ Route::middleware('auth')->group(function () {
             Route::resource('invoices', SalesInvoiceController::class);
 
             // *Sales Returns*
-            Route::get('returns/datatable', [SalesReturnController::class, 'datatable'])->name('sales.returns.datatable');
-            Route::get('returns/{return}/print', [SalesReturnController::class, 'print'])->name('sales.returns.print');
+            Route::get('returns/datatable', [SalesReturnController::class, 'datatable'])->name('returns.datatable');
+            Route::get('returns/{return}/print', [SalesReturnController::class, 'print'])->name('returns.print');
             Route::get('returns/invoice-products-options/{invoice}', [SalesReturnController::class, 'getInvoiceProductsOptions']);
             Route::get('returns/filter-invoices', [SalesReturnController::class, 'filterInvoices']);
 
 
             Route::get('returns/invoice-product-options/{salesInvoiceId}/{productId}', [SalesReturnController::class, 'getReturnProductBatchOptions']);
-
             Route::resource('returns', SalesReturnController::class);
 
 
             // *Sales Receipts*
-            Route::get('receipts/datatable', [SalesReceiptController::class, 'datatable'])->name('sales.receipts.datatable');
-            Route::get('receipts/tarik-faktur-options', [SalesReceiptController::class, 'tarikFakturOptions'])->name('sales.receipts.tarik_faktur_options');
-            Route::get('receipts/{receipt}/print', [SalesReceiptController::class, 'print'])->name('sales.receipts.print');
+            Route::get('receipts/datatable', [SalesReceiptController::class, 'datatable'])->name('receipts.datatable');
+            Route::get('receipts/tarik-faktur-options', [SalesReceiptController::class, 'tarikFakturOptions'])->name('receipts.tarik_faktur_options');
+            Route::get('receipts/{receipt}/print', [SalesReceiptController::class, 'print'])->name('receipts.print');
             Route::resource('receipts', SalesReceiptController::class);
+
+            // *Payments*
+            Route::get('payments/datatable', [SalesPaymentController::class, 'datatable'])->name('payments.datatable');
+            Route::get('payments/tarik-nota-options', [SalesPaymentController::class, 'tarikNotaOptions'])->name('payments.tarik_nota_options');
+            Route::get('payments/{payment}/print', [SalesPaymentController::class, 'print'])->name('payments.print');
+            Route::resource('payments', SalesPaymentController::class);
         });
 
         // *Purchases*

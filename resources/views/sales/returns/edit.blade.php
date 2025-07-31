@@ -5,7 +5,7 @@
 @stop
 
 @section('content')
-<form method="POST" action="{{ route('returns.update', $return->id) }}">
+<form method="POST" action="{{ route('sales.returns.update', $return->id) }}">
     @csrf @method('PUT')
     @include('sales.returns.partials.form', [
     'return' => $return,

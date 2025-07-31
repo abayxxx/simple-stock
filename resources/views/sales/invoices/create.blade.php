@@ -9,7 +9,7 @@
 @section('content')
 <div class="card">
     <div class="card-body">
-        <form method="POST" action="{{ route('invoices.store') }}">
+        <form method="POST" action="{{ route('sales.invoices.store') }}">
             @csrf
             @include('sales.invoices.partials.form', [
             'customers' => $customers,
@@ -29,7 +29,7 @@
             @endif
             <div class="mt-3">
                 <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Simpan</button>
-                <a href="{{ route('invoices.index') }}" class="btn btn-secondary">Kembali</a>
+                <a href="{{ route('sales.invoices.index') }}" class="btn btn-secondary">Kembali</a>
             </div>
         </form>
     </div>

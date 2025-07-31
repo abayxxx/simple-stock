@@ -5,7 +5,7 @@
 @stop
 
 @section('content')
-<form method="POST" action="{{ route('returns.store') }}">
+<form method="POST" action="{{ route('sales.returns.store') }}">
     @csrf
     @include('sales.returns.partials.form', [
     'return' => null,

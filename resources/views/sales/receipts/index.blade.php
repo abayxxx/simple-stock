@@ -5,7 +5,7 @@
 @stop
 @section('content')
 <div class="mb-3">
-    <a href="{{ route('receipts.create') }}" class="btn btn-primary"><i class="fa fa-plus"></i> Tambah Tanda Terima</a>
+    <a href="{{ route('sales.receipts.create') }}" class="btn btn-primary"><i class="fa fa-plus"></i> Tambah Tanda Terima</a>
 </div>
 <div class="card">
     <div class="card-header d-flex align-items-center">

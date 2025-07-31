@@ -128,7 +128,7 @@ class SalesReceiptController extends Controller
             $receipt->save();
         });
 
-        return redirect()->route('receipts.index')->with('success', 'Tanda terima penjualan berhasil dibuat.');
+        return redirect()->route('sales.receipts.index')->with('success', 'Tanda terima penjualan berhasil dibuat.');
     }
 
     protected static function generateKode()
@@ -203,7 +203,7 @@ class SalesReceiptController extends Controller
             $receipt->save();
         });
 
-        return redirect()->route('receipts.index')->with('success', 'Tanda terima penjualan berhasil diperbarui.');
+        return redirect()->route('sales.receipts.index')->with('success', 'Tanda terima penjualan berhasil diperbarui.');
     }
 
 
@@ -212,7 +212,7 @@ class SalesReceiptController extends Controller
         // Hapus tanda terima dan relasinya
         $receipt->receiptItems()->delete();
         $receipt->delete();
-        return redirect()->route('receipts.index')->with('success', 'Tanda terima penjualan berhasil dihapus.');
+        return redirect()->route('sales.receipts.index')->with('success', 'Tanda terima penjualan berhasil dihapus.');
     }
 
     public function print(SalesReceipt $receipt)

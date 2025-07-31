@@ -6,7 +6,7 @@
 
 @section('content')
 <div class="mb-3">
-    <a href="{{ route('returns.create') }}" class="btn btn-primary"><i class="fa fa-plus"></i> Tambah Retur Penjualan</a>
+    <a href="{{ route('sales.returns.create') }}" class="btn btn-primary"><i class="fa fa-plus"></i> Tambah Retur Penjualan</a>
 </div>
 <div class="card">
     <div class="card-header d-flex align-items-center">
