@@ -10,14 +10,14 @@
     <a href="{{ route('sales.payments.create') }}" class="btn btn-primary"><i class="fa fa-plus"></i> Tambah Pembayaran</a>
 </div>
 <div class="card">
-    <div class="card-body">
+    <div class="card-body table-responsive">
         <table class="table table-bordered" id="datatable">
             <thead>
                 <tr>
                     <th>No</th>
                     <th>Kode</th>
                     <th>Tanggal</th>
-                    <th>Supplier</th>
+                    <th>Customer</th>
                     <th>Jumlah Nota</th>
                     <th>Total Bayar</th>
                     <th>User</th>
@@ -53,8 +53,8 @@
                     name: 'tanggal'
                 },
                 {
-                    data: 'supplier',
-                    name: 'supplier'
+                    data: 'customer',
+                    name: 'customer'
                 },
                 {
                     data: 'jumlah_nota',

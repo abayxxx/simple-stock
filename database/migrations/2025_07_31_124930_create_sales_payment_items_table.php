@@ -15,8 +15,8 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('sales_payment_id');
             $table->enum('tipe_nota', ['FAKTUR', 'RETUR']); // type: invoice or return
-            $table->unsignedBigInteger('purchases_invoice_id')->nullable(); // for invoice
-            $table->unsignedBigInteger('purchases_return_id')->nullable();  // for return
+            $table->unsignedBigInteger('sales_invoice_id')->nullable(); // for invoice
+            $table->unsignedBigInteger('sales_return_id')->nullable();  // for return
 
             $table->decimal('nilai_nota', 20, 2)->default(0);    // total value of note
             $table->decimal('sisa', 20, 2)->default(0);          // outstanding

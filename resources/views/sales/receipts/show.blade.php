@@ -18,42 +18,53 @@
             </div>
         </div>
 
-        <div>
-            <a href="{{ route('sales.receipts.print', $receipt->id) }}" target="_blank" class="btn btn-info">
-                <i class="fa fa-print"></i> Print / Export
-            </a>
+        <div class="mb-3 row">
+            <div class="mr-3">
+                <a href="{{ route('sales.receipts.print', $receipt->id) }}" target="_blank" class="btn btn-info">
+                    <i class="fa fa-print"></i> Print / Export
+                </a>
+            </div>
+            @if(isSuperAdmin())
+            <div>
+                <a href="{{ route('sales.receipts.lock', $receipt->id) }}" target="_blank" class="btn {{ $receipt->is_locked ? 'btn-warning' : 'btn-success' }}" >
+                    <i class="fa fa-lock"></i>{{ $receipt->is_locked ? ' Buka Kunci Faktur' : ' Kunci Faktur' }}
+                </a>
+            </div>
+            @endif
         </div>
 
         <h5 class="mt-4">Detail Faktur Diterima</h5>
-        <table class="table table-bordered table-striped">
-            <thead>
-                <tr>
-                    <th>No Faktur</th>
-                    <th>Tanggal</th>
-                    <th>Total Faktur</th>
-                    <th>Total Retur</th>
-                    <th>Catatan</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($receipt->receiptItems as $item)
-                <tr>
-                    <td>{{ $item->invoice->kode ?? '-' }}</td>
-                    <td>{{ $item->invoice->tanggal ? tanggal_indo($item->invoice->tanggal) : '-' }}</td>
-                    <td class="text-end">{{ number_format($item->total_faktur, 2, ',', '.') }}</td>
-                    <td class="text-end">{{ number_format($item->total_retur, 2, ',', '.') }}</td>
-                    <td>{{ $item->catatan }}</td>
-                </tr>
-                @endforeach
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th>No Faktur</th>
+                        <th>Tanggal</th>
+                        <th>Total Faktur</th>
+                        <th>Total Retur</th>
+                        <th>Catatan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($receipt->receiptItems as $item)
+                    <tr>
+                        <td>{{ $item->invoice->kode ?? '-' }}</td>
+                        <td>{{ $item->invoice->tanggal ? tanggal_indo($item->invoice->tanggal) : '-' }}</td>
+                        <td class="text-end">{{ number_format($item->total_faktur, 2, ',', '.') }}</td>
+                        <td class="text-end">{{ number_format($item->total_retur, 2, ',', '.') }}</td>
+                        <td>{{ $item->catatan }}</td>
+                    </tr>
+                    @endforeach
 
-                <tr>
-                    <th class="text-end" colspan="4">Total Diterima</th>
-                    <td class="text-end total-diterima" colspan="2">{{ number_format($receipt->total_faktur, 2, ',', '.') }}</td>
-                </tr>
+                    <tr>
+                        <th class="text-end" colspan="4">Total Diterima</th>
+                        <td class="text-end total-diterima" colspan="2">{{ number_format($receipt->total_faktur, 2, ',', '.') }}</td>
+                    </tr>
 
 
-            </tbody>
-        </table>
+                </tbody>
+            </table>
+        </div>
         <div class="mt-4">
             <a href="{{ route('sales.receipts.index') }}" class="btn btn-secondary">Kembali</a>
         </div>

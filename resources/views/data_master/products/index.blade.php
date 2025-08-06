@@ -18,6 +18,7 @@
             <tr>
                 <th>Kode</th>
                 <th>Nama</th>
+                <th>Merk</th>
                 <th>Satuan Kecil</th>
                 <th>Harga Pokok Bruto</th>
                 <th>Harga Jual Umum</th>
@@ -43,6 +44,10 @@
                 {
                     data: 'nama',
                     name: 'nama'
+                },
+                {
+                    data: 'merk',
+                    name: 'merk'
                 },
                 {
                     data: 'satuan_kecil',

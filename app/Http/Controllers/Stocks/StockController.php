@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Stocks;
 use App\Http\Controllers\Controller;
 use App\Models\Stock;
 use App\Models\Product;
+use App\Models\PurchasesInvoiceItem;
+use App\Models\SalesInvoiceItem;
 use Illuminate\Http\Request;
 use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Facades\DB;
@@ -158,9 +160,10 @@ class StockController extends Controller
         return $type == 'in' ? 'Stok Masuk' : ($type == 'out' ? 'Stok Keluar' : 'Stok Pemusnahan');
     }
 
-    public function getProductOptions($productId)
+    public function getProductOptions(Request $request, $productId)
     {
         $lokasiId = request('lokasi_id');
+        $q = request('q', '');
         $stocks = \App\Models\Stock::where('product_id', $productId)
             ->where('type', 'in') // <<--- FILTER ONLY STOCK IN
             ->where('sisa_stok', '>', 0) // Pastikan stok masih tersedia
@@ -174,5 +177,79 @@ class StockController extends Controller
             'tanggal_expired' => $stocks->pluck('tanggal_expired')->unique()->values(),
             'harga' => optional(\App\Models\Product::find($productId))->harga_umum // or any price field
         ]);
+    }
+
+    public function historyPenjualan(Request $request)
+    {
+        $customerId = $request->customer_id;
+        $productId = $request->product_id;
+
+        $data = SalesInvoiceItem::with(['invoice', 'product', 'invoice.customer'])
+            ->whereHas('invoice', fn($q) => $q->where('company_profile_id', $customerId))
+            ->where('product_id', $productId)
+            ->orderByDesc('id')
+            ->take(50)
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'kode' => $item->invoice->kode,
+                    'tanggal' => \Carbon\Carbon::parse($item->invoice->tanggal)->format('d M Y'),
+                    'customer_nama' => $item->invoice->customer->name ?? '-',
+                    'produk_nama' => $item->product->nama ?? '',
+                    'qty' => $item->qty,
+                    'satuan' => strtoupper($item->satuan),
+                    'harga_satuan' => $item->harga_satuan,
+                    'diskon_1_persen' => $item->diskon_1_persen,
+                    'diskon_1_rupiah' => $item->diskon_1_rupiah,
+                    'diskon_2_persen' => $item->diskon_2_persen,
+                    'diskon_2_rupiah' => $item->diskon_2_rupiah,
+                    'diskon_3_persen' => $item->diskon_3_persen,
+                    'diskon_3_rupiah' => $item->diskon_3_rupiah,
+                    'sub_total_sblm_disc' => $item->sub_total_sblm_disc,
+                    'total_diskon_item' => $item->total_diskon_item,
+                    'sub_total_sebelum_ppn' => $item->sub_total_sebelum_ppn,
+                    'ppn_persen' => $item->ppn_persen,
+                    'sub_total_setelah_disc' => $item->sub_total_setelah_disc,
+                    'catatan' => $item->catatan,
+                ];
+            })->values();
+        return response()->json($data);
+    }
+
+    public function historyPembelian(Request $request)
+    {
+        $supplierId = $request->supplier_id;
+        $productId = $request->product_id;
+
+        $data = PurchasesInvoiceItem::with(['invoice', 'product', 'invoice.supplier'])
+            ->whereHas('invoice', fn($q) => $q->where('company_profile_id', $supplierId))
+            ->where('product_id', $productId)
+            ->orderByDesc('id')
+            ->take(50)
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'kode' => $item->invoice->kode,
+                    'tanggal' => \Carbon\Carbon::parse($item->invoice->tanggal)->format('d M Y'),
+                    'supplier_nama' => $item->invoice->supplier->name ?? '-',
+                    'produk_nama' => $item->product->nama ?? '',
+                    'qty' => $item->qty,
+                    'satuan' => strtoupper($item->satuan),
+                    'harga_satuan' => $item->harga_satuan,
+                    'diskon_1_persen' => $item->diskon_1_persen,
+                    'diskon_1_rupiah' => $item->diskon_1_rupiah,
+                    'diskon_2_persen' => $item->diskon_2_persen,
+                    'diskon_2_rupiah' => $item->diskon_2_rupiah,
+                    'diskon_3_persen' => $item->diskon_3_persen,
+                    'diskon_3_rupiah' => $item->diskon_3_rupiah,
+                    'sub_total_sblm_disc' => $item->sub_total_sblm_disc,
+                    'total_diskon_item' => $item->total_diskon_item,
+                    'sub_total_sebelum_ppn' => $item->sub_total_sebelum_ppn,
+                    'ppn_persen' => $item->ppn_persen,
+                    'sub_total_setelah_disc' => $item->sub_total_setelah_disc,
+                    'catatan' => $item->catatan,
+                ];
+            })->values();
+        return response()->json($data);
     }
 }

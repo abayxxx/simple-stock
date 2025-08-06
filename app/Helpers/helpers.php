@@ -1,5 +1,7 @@
 <?php
 
+
+
 function tanggal_indo($tgl)
 {
     if (!$tgl) return '';
@@ -48,4 +50,20 @@ if (!function_exists('terbilang')) {
         }
         return trim($terbilang);
     }
+}
+
+// function to check if a sales invoice is already in the table sales receipts
+function isSalesInvoiceLocked($invoiceId)
+{
+    return \App\Models\SalesReceipt::with('receiptItems')
+        ->whereHas('receiptItems', function ($query) use ($invoiceId) {
+            $query->where('sales_invoice_id', $invoiceId);
+        })
+        ->where('is_locked', true)
+        ->exists();
+}
+
+function isSuperAdmin()
+{
+    return auth()->check() && auth()->user()->role === 'superadmin';
 }

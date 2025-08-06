@@ -17,14 +17,17 @@ use App\Http\Controllers\Purchases\PurchasesPaymentController;
 use App\Http\Controllers\Stocks\StockListController;
 use App\Http\Controllers\Stocks\StockCardController;
 use App\Http\Controllers\Sales\SalesPaymentController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Sales\SalesDetailController;
+use App\Http\Controllers\Sales\SalesUnpaidController;
+use App\Http\Controllers\Settings\SettingsController;
+use App\Http\Controllers\Admin\UserController;
 
 Route::get('/', function () {
     return view('auth.login');
-});
+})->middleware('guest');
 
-Route::get('/dashboard', function () {
-    return view('home');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', [DashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -40,6 +43,8 @@ Route::middleware('auth')->group(function () {
         // *Products*
         Route::get('products/datatable', [ProductController::class, 'datatable'])->name('products.datatable');
         Route::get('admin/stocks/product-options/{product}', [StockController::class, 'getProductOptions']);
+
+        Route::get('products/search', [ProductController::class, 'search']);
 
         Route::resource('products', ProductController::class);
 
@@ -83,6 +88,9 @@ Route::middleware('auth')->group(function () {
             Route::put('{type}/{stock}', [StockController::class, 'update'])->name('stock.update');
             Route::delete('{type}/{stock}', [StockController::class, 'delete'])->name('stock.delete');
             Route::get('{type}/{stock}', [StockController::class, 'show'])->name('stock.show');
+
+            Route::get('history-penjualan', [StockController::class, 'historyPenjualan'])->name('stock.history-penjualan');
+            Route::get('history-pembelian', [StockController::class, 'historyPembelian'])->name('stock.history-pembelian');
         });
 
         // *Sales Invoices*
@@ -110,6 +118,7 @@ Route::middleware('auth')->group(function () {
             Route::get('receipts/datatable', [SalesReceiptController::class, 'datatable'])->name('receipts.datatable');
             Route::get('receipts/tarik-faktur-options', [SalesReceiptController::class, 'tarikFakturOptions'])->name('receipts.tarik_faktur_options');
             Route::get('receipts/{receipt}/print', [SalesReceiptController::class, 'print'])->name('receipts.print');
+            Route::get('receipts/{receipt}/lock', [SalesReceiptController::class, 'lock'])->name('receipts.lock');
             Route::resource('receipts', SalesReceiptController::class);
 
             // *Payments*
@@ -117,6 +126,16 @@ Route::middleware('auth')->group(function () {
             Route::get('payments/tarik-nota-options', [SalesPaymentController::class, 'tarikNotaOptions'])->name('payments.tarik_nota_options');
             Route::get('payments/{payment}/print', [SalesPaymentController::class, 'print'])->name('payments.print');
             Route::resource('payments', SalesPaymentController::class);
+
+            // *Detail*
+            Route::get('detail', [SalesDetailController::class, 'index'])->name('detail.index');
+            Route::get('detail/data', [SalesDetailController::class, 'datatable'])->name('detail.data');
+            Route::get('detail/export', [SalesDetailController::class, 'exportExcel'])->name('detail.export');
+
+            // *Unpaid*
+            Route::get('unpaid', [SalesUnpaidController::class, 'index'])->name('unpaid.index');
+            Route::get('unpaid/data', [SalesUnpaidController::class, 'data'])->name('unpaid.data');
+            Route::get('unpaid/export', [SalesUnpaidController::class, 'export'])->name('unpaid.export');
         });
 
         // *Purchases*
@@ -142,6 +161,20 @@ Route::middleware('auth')->group(function () {
             Route::get('payments/tarik-nota-options', [PurchasesPaymentController::class, 'tarikNotaOptions'])->name('payments.tarik_nota_options');
             Route::get('payments/{payment}/print', [PurchasesPaymentController::class, 'print'])->name('payments.print');
             Route::resource('payments', PurchasesPaymentController::class);
+        });
+
+
+        // *Settings*
+        Route::group(['prefix' => 'settings', 'as' => 'settings.'], function () {
+            Route::get('profile', [SettingsController::class, 'profile'])->name('profile');
+            Route::post('profile', [SettingsController::class, 'updateProfile'])->name('profile.update');
+            Route::post('password', [SettingsController::class, 'updatePassword'])->name('password.update');
+        });
+
+        // *Users*
+        Route::group(['prefix' => 'management', 'as' => 'management.'], function () {
+            Route::get('datatable', [UserController::class, 'datatable'])->name('users.datatable');
+            Route::resource('users', UserController::class)->except(['show']);
         });
     });
 });

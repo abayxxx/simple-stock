@@ -10,7 +10,7 @@
     <a href="{{ route('purchases.payments.create') }}" class="btn btn-primary"><i class="fa fa-plus"></i> Tambah Pembayaran</a>
 </div>
 <div class="card">
-    <div class="card-body">
+    <div class="card-body table-responsive">
         <table class="table table-bordered" id="datatable">
             <thead>
                 <tr>

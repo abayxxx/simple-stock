@@ -8,35 +8,37 @@ class SalesPaymentItem extends Model
 {
     //
     protected $fillable = [
+        'sales_payment_id',
+        'tipe_nota',
+        'sales_invoice_id',
         'sales_return_id',
-        'product_id',
-        'no_seri',
-        'tanggal_expired',
-        'qty',
-        'satuan',
-        'harga_satuan',
-        'diskon_1_persen',
-        'diskon_1_rupiah',
-        'diskon_2_persen',
-        'diskon_2_rupiah',
-        'diskon_3_persen',
-        'diskon_3_rupiah',
-        'sub_total_sblm_disc',
-        'total_diskon_item',
-        'sub_total_sebelum_ppn',
-        'ppn_persen',
-        'sub_total_setelah_disc',
-        'catatan'
+        'nilai_nota',
+        'sisa',
+        'tunai',
+        'bank',
+        'giro',
+        'cndn',
+        'retur',
+        'panjar',
+        'lainnya',
+        'sub_total',
+        'pot_ke_no',
+        'catatan',
     ];
 
     // Relations
-    public function purchasesReturn()
+    public function payment()
     {
-        return $this->belongsTo(PurchasesReturn::class);
+        return $this->belongsTo(SalesPayment::class, 'sales_payment_id');
     }
 
-    public function product()
+    public function invoice()
     {
-        return $this->belongsTo(Product::class, 'product_id');
+        return $this->belongsTo(SalesInvoice::class, 'sales_invoice_id');
+    }
+
+    public function return()
+    {
+        return $this->belongsTo(SalesReturn::class, 'sales_return_id');
     }
 }

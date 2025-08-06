@@ -15,7 +15,7 @@
             <input type="date" id="periode_akhir" class="form-control d-inline-block" style="width:140px">
         </div>
     </div>
-    <div class="card-body">
+    <div class="card-body table-responsive">
         <table class="table table-bordered" id="receipts-table">
             <thead>
                 <tr>

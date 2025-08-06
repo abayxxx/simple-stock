@@ -6,14 +6,18 @@
 <div id="add-item-form" class="card p-3 mb-4 border shadow-sm">
     <div class="row">
         <div class="col-md-3 mb-2">
-            <label>Produk</label>
-            <select id="add-product_id" class="form-control select-product">
+            <div class="d-flex ">
+                <!-- ... -->
+                <label>Produk</label>
+                <button type="button" class="btn btn-link p-0 ms-1 ml-1" id="btn-history" style="font-size:1.15em;">
+                    <i class="fa fa-info-circle text-info"></i>
+                </button>
+                <!-- ... -->
+
+            </div>
+             <select id="add-product_id" class="form-control select-product ">
                 <option value="">-- Pilih Produk --</option>
-                @foreach($products as $p)
-                <option value="{{ $p->id }}" data-satuan_kecil="{{ $p->satuan_kecil }}">
-                    {{ $p->kode }} - {{ $p->nama }}
-                </option>
-                @endforeach
+    <!-- Options will be loaded dynamically by Select2 -->
             </select>
         </div>
         <div class="col-md-2 mb-2">
@@ -132,7 +136,10 @@
 </div>
 <div id="hidden-inputs-container"></div>
 
+@include('purchases.returns.partials.modal-history')
+
 @push('js')
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
 $(function() {
     let itemIndex = 0;
@@ -191,27 +198,62 @@ $(function() {
         return `<div class="item-hidden" data-index="${idx}">${html}</div>`;
     }
 
+     function initProductSelect(invoiceId = null) {
+            $('#add-product_id').select2({
+                placeholder: '-- Pilih Produk --',
+                minimumInputLength: 0,
+                ajax: {
+                    url: function() {
+                        // URL depends on selected invoice
+                        if(invoiceId){
+                            return `{{ url('admin/purchases/returns/invoice-products-options') }}/${invoiceId}`;
+                        }
+                        return "{{ url('admin/purchases/returns/invoice-products-options') }}"; // fallback, returns nothing
+                    },
+                    dataType: 'json',
+                    delay: 250,
+                    data: function(params) {
+                        return {
+                            q: params.term // search term
+                        };
+                    },
+                    processResults: function(data) {
+                        // Server should return: {products: [{id, text, satuan}]}
+                        return {
+                            results: (data.products || []).map(function(prod) {
+                                return {
+                                    id: prod.id,
+                                    text: prod.text,
+                                    satuan_kecil: prod.satuan || 'Satuan'
+                                };
+                            })
+                        };
+                    },
+                    cache: true
+                }
+            });
+        }
+
+    // --- Initialize Select2 for product dropdown
+        initProductSelect($('#select-purchases-invoice').val() || null);
+
     // --- Faktur change: Update products
     $('#select-purchases-invoice').on('change', function() {
         let invoiceId = $(this).val();
-        $('#review-items-table tbody').empty();
-        $('#hidden-inputs-container').empty();
-        itemIndex = 0;
-        if (!invoiceId) {
-            $('#add-product_id').html('<option value="">-- Pilih Produk --</option>');
-            return;
-        }
-        $.get("{{ url('admin/purchases/returns/invoice-products-options') }}/" + invoiceId, function(res) {
-            let options = '<option value="" data-satuan_kecil="">-- Pilih Produk --</option>';
-            $.each(res.products, function(i, prod) {
-                options += `<option value="${prod.id}" data-satuan_kecil="${prod.satuan || "Satuan"}">${prod.text}</option>`;
-            });
-            $('#add-product_id').html(options);
-        });
-        $('#add-item-form input, #add-item-form select, #add-item-form textarea').val('');
-        $('#add-satuan').val('');
-        $('.satuan-box').text('Satuan');
-        updateSummary();
+            $('#review-items-table tbody').empty();
+            $('#hidden-inputs-container').empty();
+            itemIndex = 0;
+
+               // Reset and reinitialize Select2 for products
+            $('#add-product_id').val(null).trigger('change');
+            $('#add-product_id').off('select2:select'); // Remove previous handlers if any
+            $('#add-product_id').select2('destroy');    // Destroy old Select2
+            initProductSelect(invoiceId); 
+
+            $('#add-item-form input, #add-item-form select, #add-item-form textarea').val('');
+            $('#add-satuan').val('');
+            $('.satuan-box').text('Satuan');
+            updateSummary();
     });
 
     // --- Product change: batch/seri/expired
@@ -376,6 +418,81 @@ $(function() {
     });
 
     updateSummary();
+
+    $('#btn-history').on('click', function() {
+            let supplier_id = $('[name="company_profile_id"]').val();
+            let product_id = $('#add-product_id').val();
+            if (!supplier_id || !product_id) {
+                alert('Pilih supplier dan produk terlebih dahulu!');
+                return;
+            }
+            // Load via AJAX
+            $('#table-history tbody').html('<tr><td colspan="18" class="text-center">Memuat data...</td></tr>');
+            $.get("{{ url('admin/stocks/history-pembelian') }}", {
+                supplier_id: supplier_id,
+                product_id: product_id
+            }, function(res) {
+                let rows = '';
+                if (!res.length) {
+                    rows = '<tr><td colspan="18" class="text-center text-muted">Tidak ada histori pembelian.</td></tr>';
+                } else {
+                    res.forEach(row => {
+                        rows += `<tr>
+                  <td>${row.kode}</td>
+                  <td>${row.tanggal}</td>
+                  <td>${row.supplier_nama}</td>
+                  <td>${row.produk_nama}</td>
+                  <td>${row.qty} ${row.satuan}</td>
+                  <td>${Number(row.harga_satuan).toLocaleString()}</td>
+                  <td>${row.diskon_1_persen||0}</td>
+                  <td>${row.diskon_1_rupiah||0}</td>
+                  <td>${row.diskon_2_persen||0}</td>
+                  <td>${row.diskon_2_rupiah||0}</td>
+                  <td>${row.diskon_3_persen||0}</td>
+                  <td>${row.diskon_3_rupiah||0}</td>
+                    <td>${Number(row.sub_total_sblm_disc).toLocaleString()}</td>
+                    <td>${Number(row.total_diskon_item).toLocaleString()}</td>
+                    <td>${Number(row.sub_total_sebelum_ppn).toLocaleString()}</td>
+                    <td>${row.ppn_persen||0}</td>
+                    <td>${Number(row.sub_total_setelah_disc).toLocaleString()}</td>
+                    <td>${row.catatan||''}</td>
+                </tr>`;
+                    });
+                }
+                $('#table-history tbody').html(rows);
+            });
+            $('#modal-history').modal('show');
+        });
 });
 </script>
+@endpush
+
+
+@push('css')
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>
+
+    /* Match Select2 single select to Bootstrap 4/5 .form-control */
+    .select2-container--default .select2-selection--single {
+        height: 38px !important; /* Default Bootstrap 4/5 input height */
+        padding: 6px 12px !important;
+        font-size: 1rem !important;
+        border: 1px solid #ced4da !important;
+        border-radius: 0.25rem !important; /* For Bootstrap 4, use 0.375rem for Bootstrap 5 */
+        display: flex;
+        align-items: center;
+        box-sizing: border-box;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 24px !important;
+        padding-left: 0 !important;
+    }
+
+    .select2-selection__arrow {
+        height: 36px !important;
+        right: 6px;
+        top: 1px;
+    }
+</style>
 @endpush

@@ -9,6 +9,8 @@ use Yajra\DataTables\Facades\DataTables;
 
 class ProductController extends Controller
 {
+
+
     public function index()
     {
         return view('data_master.products.index');
@@ -29,8 +31,8 @@ class ProductController extends Controller
 
     public function create()
     {
-        $satuanList = ['BOX', 'PCS', 'BTL', 'UNIT', 'AMP', 'VIAL', 'TUBE'];
-        $satuanMassaList = ['GRAM', 'KG', 'MG', 'LITER', 'ML', 'OUNCE'];
+        $satuanList = Product::getSatuanList();
+        $satuanMassaList = Product::getSatuanMassaList();
         return view('data_master.products.create', compact('satuanList', 'satuanMassaList'));
     }
 
@@ -51,8 +53,9 @@ class ProductController extends Controller
 
     public function edit(Product $product)
     {
-        $satuanList = ['BOX', 'PCS', 'BTL', 'UNIT', 'AMP', 'VIAL', 'TUBE'];
-        $satuanMassaList = ['GRAM', 'KG', 'MG', 'LITER', 'ML', 'OUNCE'];
+        
+        $satuanList = $product->getSatuanList();
+        $satuanMassaList = $product->getSatuanMassaList();
         return view('data_master.products.edit', compact('product', 'satuanList', 'satuanMassaList'));
     }
 
@@ -76,6 +79,7 @@ class ProductController extends Controller
     {
         return $request->validate([
             'nama' => 'required|string|max:255',
+            'merk' => 'nullable|string|max:100',
             'satuan_kecil' => 'required|string|max:100',
             'isi_satuan_kecil' => 'required|integer|min:1',
             'satuan_sedang' => 'nullable|string|max:100',
@@ -99,5 +103,16 @@ class ProductController extends Controller
             'diskon_harga_4' => 'nullable|numeric',
             'diskon_harga_5' => 'nullable|numeric',
         ]);
+    }
+
+    public function search(Request $request)
+    {
+        $q = $request->get('q', '');
+        $products = Product::where('kode', 'like', "%$q%")
+                    ->orWhere('nama', 'like', "%$q%")
+                    ->orderBy('kode')
+                    ->limit(20)
+                    ->get(['id', 'kode', 'nama', 'satuan_kecil']);
+        return response()->json($products);
     }
 }

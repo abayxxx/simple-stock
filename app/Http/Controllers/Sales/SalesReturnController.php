@@ -204,6 +204,8 @@ class SalesReturnController extends Controller
         unset($data['items']);
 
         DB::transaction(function () use ($return, $data, $items) {
+            // Update auth user
+            $return->update($data + ['user_id' => auth()->id()]);
             // 1. Hapus item lama dan stok 'in' lama terkait retur ini
             $oldItems = $return->items;
             foreach ($oldItems as $old) {
@@ -329,18 +331,28 @@ class SalesReturnController extends Controller
     }
 
     // In SalesReturnController
-    public function getInvoiceProductsOptions($invoiceId)
+    public function getInvoiceProductsOptions(Request $request,$invoiceId)
     {
-        $invoice = \App\Models\SalesInvoice::with('items.product')->findOrFail($invoiceId);
+       $q = $request->get('q', '');
 
-        // Get unique products from invoice items
-        $products = $invoice->items->map(fn($item) => $item->product)->unique('id');
+        $invoice = SalesInvoice::with('items.product')->findOrFail($invoiceId);
 
-        // Return as JSON (for building <option> in JS)
+        // Get all unique products from invoice items
+        $allProducts = $invoice->items->map(fn($item) => $item->product)->unique('id');
+
+        // If there is a search, filter; otherwise, take first 10
+        $filteredProducts = $q
+            ? $allProducts->filter(function($p) use ($q) {
+                return str_contains(strtolower($p->kode), strtolower($q))
+                    || str_contains(strtolower($p->nama), strtolower($q));
+            })
+            : $allProducts->sortBy('kode')->take(10);
+
         return response()->json([
-            'products' => $products->map(fn($p) => [
+            'products' => $filteredProducts->map(fn($p) => [
                 'id' => $p->id,
                 'text' => $p->kode . ' - ' . $p->nama,
+                'satuan' => $p->satuan_kecil,
             ])->values(),
         ]);
     }

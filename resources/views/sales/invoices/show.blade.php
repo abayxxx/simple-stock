@@ -26,7 +26,7 @@
         </div>
 
         <div>
-            <a href="{{ route('invoices.print', $invoice->id) }}" target="_blank" class="btn btn-info">
+            <a href="{{ route('sales.invoices.print', $invoice->id) }}" target="_blank" class="btn btn-info">
                 <i class="fa fa-print"></i> Print / Export
             </a>
         </div>

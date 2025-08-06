@@ -24,6 +24,10 @@ $satuanMassaList = $satuanMassaList ?? ['GRAM', 'KG', 'MG', 'LITER', 'ML', 'OUNC
                     <label>Nama Produk <span class="text-danger">*</span></label>
                     <input name="nama" value="{{ old('nama', $product->nama ?? '') }}" class="form-control" required>
                 </div>
+                <div class="form-group mb-3">
+                    <label>Merk</label>
+                    <input name="merk" value="{{ old('merk', $product->merk ?? '') }}" class="form-control">
+                </div>
                 <div class="form-group">
                     <label>Satuan Kecil <span class="text-danger">*</span></label>
                     <select name="satuan_kecil" class="form-control" required>

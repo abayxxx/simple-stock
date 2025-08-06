@@ -3,11 +3,15 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Product extends Model
 {
+        use HasFactory;
+
     protected $fillable = [
         'nama',
+        'merk',
         'satuan_kecil',
         'isi_satuan_kecil',
         'satuan_sedang',
@@ -32,6 +36,8 @@ class Product extends Model
         'diskon_harga_5',
     ];
 
+    
+
     // Otomatis generate kode produk (contoh: PRO-YYYYMMDD-0001)
     protected static function boot()
     {
@@ -52,4 +58,27 @@ class Product extends Model
     {
         return $this->hasMany(Stock::class);
     }
+
+
+    // Satuan list
+    public static function getSatuanList()
+    {
+       $satuanList = [
+            'BOX', 'PCS', 'BTL', 'UNIT', 'AMP', 'VIAL', 'TUBE',
+            'STRIP', 'PACK', 'SUPP', 'AMPUL', 'PEN', 'TAB',
+            'FLS', 'BGUS', 'LSN', 'SET', 'KLG', 'KTK'
+        ];
+
+        return $satuanList;
+    }
+
+    // Satuan massa list
+    public static function getSatuanMassaList()
+    {
+        return [
+            'GRAM', 'KG', 'MG', 'LITER', 'ML', 'OUNCE',
+            'POUND', 'OUNCE_TROY', 'CARAT', 'DRAM', 'GRAIN'
+        ];
+    }
+
 }

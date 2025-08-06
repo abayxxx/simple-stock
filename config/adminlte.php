@@ -434,6 +434,18 @@ return [
                     'icon' => 'fas fa-fw fa-credit-card',
                     'label_color' => 'success',
                 ],
+                [
+                    'text' => 'Faktur Penjualan Detail',
+                    'url' => 'admin/sales/detail',
+                    'icon' => 'fas fa-fw fa-file-invoice',
+                    'label_color' => 'success',
+                ],
+                [
+                    'text' => 'Faktur Penjualan Belum Lunas',
+                    'url' => 'admin/sales/unpaid',
+                    'icon' => 'fas fa-fw fa-file-invoice',
+                    'label_color' => 'success'
+                ]
             ],
         ],
         [
@@ -464,14 +476,15 @@ return [
         ['header' => 'account_settings'],
         [
             'text' => 'profile',
-            'url' => 'admin/settings',
+            'url' => 'admin/settings/profile',
             'icon' => 'fas fa-fw fa-user',
         ],
         [
-            'text' => 'change_password',
-            'url' => 'admin/settings',
-            'icon' => 'fas fa-fw fa-lock',
-        ],
+            'text' => 'Admin',
+            'url' => 'admin/management/users',
+            'icon' => 'fas fa-fw fa-users',
+            'can' => 'isSuperAdmin', // Only show this menu item to super admins
+        ]
 
     ],
 

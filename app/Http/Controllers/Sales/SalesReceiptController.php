@@ -183,6 +183,11 @@ class SalesReceiptController extends Controller
         //     }
         // }
 
+        if (!isSuperAdmin()) {
+            return redirect()->route('sales.receipts.index')
+                ->with('error', 'Hanya super admin yang dapat mengubah tanda terima penjualan.');
+        }
+
         DB::transaction(function () use ($data, $receipt) {
             // Hapus item lama
             $receipt->receiptItems()->delete();
@@ -209,6 +214,11 @@ class SalesReceiptController extends Controller
 
     public function destroy(SalesReceipt $receipt)
     {
+        if (!isSuperAdmin()) {
+            return redirect()->route('sales.receipts.index')
+                ->with('error', 'Hanya super admin yang dapat menghapus tanda terima penjualan.');
+        }
+
         // Hapus tanda terima dan relasinya
         $receipt->receiptItems()->delete();
         $receipt->delete();
@@ -219,5 +229,19 @@ class SalesReceiptController extends Controller
     {
         $receipt->load('customer', 'collector', 'receiptItems.invoice');
         return view('sales.receipts.print', compact('receipt'));
+    }
+
+    public function lock(SalesReceipt $receipt)
+    {
+       if(!isSuperAdmin()) {
+            return redirect()->route('sales.receipts.show', $receipt->id)
+                ->with('error', 'Hanya super admin yang dapat mengubah status kunci faktur.');
+        }
+
+        $receipt->is_locked = !$receipt->is_locked;
+        $receipt->save();
+
+        return redirect()->route('sales.receipts.show', $receipt->id)
+            ->with('success', 'Status kunci faktur berhasil diubah.');
     }
 }

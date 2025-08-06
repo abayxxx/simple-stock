@@ -242,6 +242,8 @@ class SalesInvoiceController extends Controller
         unset($data['items']);
 
         DB::transaction(function () use ($invoice, $data, $items) {
+            $invoice->update($data + ['user_id' => auth()->id()]);
+
             // 1. Hapus semua invoice items lama dan stok out lama terkait faktur ini
             $oldItems = $invoice->items;
             foreach ($oldItems as $old) {

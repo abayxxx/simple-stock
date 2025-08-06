@@ -27,6 +27,6 @@ class SalesPayment extends Model
 
     public function items()
     {
-        return $this->hasMany(PurchasesPaymentItem::class);
+        return $this->hasMany(SalesPaymentItem::class);
     }
 }
