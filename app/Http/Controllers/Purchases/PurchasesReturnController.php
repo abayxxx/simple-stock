@@ -20,10 +20,15 @@ class PurchasesReturnController extends Controller
     {
         $awal  = $request->periode_awal;
         $akhir = $request->periode_akhir;
-        $query = PurchasesReturn::with('supplier');
+        $supplierId = $request->supplier_id;
+        $query = PurchasesReturn::with('supplier')->orderByDesc('id');
 
         if ($awal && $akhir) {
             $query->whereBetween('tanggal', [$awal, $akhir]);
+        }
+
+        if ($supplierId) {
+            $query->where('company_profile_id', $supplierId);
         }
 
         return DataTables::of($query)
@@ -37,25 +42,46 @@ class PurchasesReturnController extends Controller
             ->addColumn('aksi', function ($r) {
                 return view('purchases.returns.partials.aksi', ['row' => $r])->render();
             })
+
+            ->filterColumn('supplier', function ($query, $keyword) {
+                $query->whereHas('supplier', function ($q) use ($keyword) {
+                    $q->where('name', 'like', "%{$keyword}%");
+                });
+            })
+            ->filterColumn('tanggal', function ($query, $keyword) {
+                $query->whereRaw("DATE_FORMAT(tanggal, '%d %b %Y') LIKE ?", ["%{$keyword}%"]);
+            })
+            ->filterColumn('grand_total', function ($query, $keyword) {
+                $query->whereRaw("FORMAT(grand_total, 2) LIKE ?", ["%{$keyword}%"]);
+            })
+            ->filterColumn('total_retur', function ($query, $keyword) {
+                $query->whereRaw("CAST(total_retur AS CHAR) LIKE ?", ["%{$keyword}%"]);
+            })
+            ->filterColumn('total_bayar', function ($query, $keyword) {
+                $query->whereRaw("CAST(total_bayar AS CHAR) LIKE ?", ["%{$keyword}%"]);
+            })
+            ->filterColumn('sisa_tagihan', function ($query, $keyword) {
+                $query->whereRaw("CAST(sisa_tagihan AS CHAR) LIKE ?", ["%{$keyword}%"]);
+            })
+            ->filterColumn('created_at', function ($query, $keyword) {
+                $query->whereRaw("DATE_FORMAT(created_at, '%d %b %Y %H:%i') LIKE ?", ["%{$keyword}%"]);
+            })
             ->rawColumns(['grand_total', 'total_retur', 'total_bayar', 'sisa_tagihan', 'aksi'])
             ->make(true);
     }
 
     public function index()
     {
-        $returns = PurchasesReturn::with('supplier', 'user')->latest()->paginate(20);
-        return view('purchases.returns.index', compact('returns'));
+        return view('purchases.returns.index');
     }
 
     public function create()
     {
         $suppliers = CompanyProfile::orderBy('name')->get();
-        $products = Product::with('stocks')->whereHas('stocks', function ($q) {
-            $q->where('type', 'in');
-        })->orderBy('nama')->get();
+      
         $branches = CompanyBranch::orderBy('name')->get();
         $invoices = PurchasesInvoice::orderBy('tanggal', 'desc')->get();
-        return view('purchases.returns.create', compact('suppliers', 'products', 'branches', 'invoices'));
+        return view('purchases.returns.create', compact('suppliers', 'branches', 'invoices'));
     }
 
     public function store(Request $request)
@@ -148,9 +174,7 @@ class PurchasesReturnController extends Controller
     public function edit(PurchasesReturn $return)
     {
         $suppliers = CompanyProfile::orderBy('name')->get();
-        $products = Product::with('stocks')->whereHas('stocks', function ($q) {
-            $q->where('type', 'in');
-        })->orderBy('nama')->get();
+        $products = Product::whereIn('id', $return->items->pluck('product_id'))->orderBy('nama')->get();
         $branches = CompanyBranch::orderBy('name')->get();
         $invoices = PurchasesInvoice::orderBy('tanggal', 'desc')->get();
         $return->load('items');
@@ -245,6 +269,7 @@ class PurchasesReturnController extends Controller
         if ($return->purchases_invoice_id) {
             $invoice = PurchasesInvoice::find($return->purchases_invoice_id);
             if ($invoice) {
+                // If invoice is locked, we cannot update it
                 $totalRetur = $return->grand_total;
                 $invoice->total_retur = $totalRetur;
                 $invoice->sisa_tagihan = max(0, $invoice->grand_total - $totalRetur);
@@ -298,8 +323,8 @@ class PurchasesReturnController extends Controller
     private function getSisaStokBatch($product_id, $no_seri = null, $tanggal_expired = null)
     {
         $q = Stock::where('product_id', $product_id);
-        if ($no_seri) $q->where('no_seri', $no_seri);
-        if ($tanggal_expired) $q->where('tanggal_expired', $tanggal_expired);
+        // if ($no_seri) $q->where('no_seri', $no_seri);
+        // if ($tanggal_expired) $q->where('tanggal_expired', $tanggal_expired);
 
         $in     = (clone $q)->where('type', 'in')->sum('jumlah');
         $out    = (clone $q)->where('type', 'out')->sum('jumlah');
@@ -330,9 +355,9 @@ class PurchasesReturnController extends Controller
     }
 
     // In PurchasesReturnController
-   public function getInvoiceProductsOptions(Request $request,$invoiceId)
+    public function getInvoiceProductsOptions(Request $request, $invoiceId)
     {
-       $q = $request->get('q', '');
+        $q = $request->get('q', '');
 
         $invoice = PurchasesInvoice::with('items.product')->findOrFail($invoiceId);
 
@@ -341,7 +366,7 @@ class PurchasesReturnController extends Controller
 
         // If there is a search, filter; otherwise, take first 10
         $filteredProducts = $q
-            ? $allProducts->filter(function($p) use ($q) {
+            ? $allProducts->filter(function ($p) use ($q) {
                 return str_contains(strtolower($p->kode), strtolower($q))
                     || str_contains(strtolower($p->nama), strtolower($q));
             })
@@ -411,5 +436,28 @@ class PurchasesReturnController extends Controller
     {
         $invoice = PurchasesReturn::with(['supplier', 'items.product'])->findOrFail($id);
         return view('purchases.returns.print', compact('invoice'));
+    }
+
+    public function filterOptions(Request $request)
+    {
+        $awal  = $request->awal;
+        $akhir = $request->akhir;
+
+        $base = PurchasesReturn::query();
+        if ($awal  && $akhir) {
+            $base->whereBetween('tanggal', [$awal, $akhir]);
+        }
+
+        // Distinct keys from invoices in range
+        $supplierIds   = (clone $base)->whereNotNull('company_profile_id')->distinct()->pluck('company_profile_id');
+
+
+        // Fetch display names
+        $suppliers   = CompanyProfile::whereIn('id', $supplierIds)->orderBy('name')->get(['id', 'name']);
+
+
+        return response()->json([
+            'suppliers'    => $suppliers,
+        ]);
     }
 }

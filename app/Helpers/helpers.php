@@ -67,3 +67,38 @@ function isSuperAdmin()
 {
     return auth()->check() && auth()->user()->role === 'superadmin';
 }
+
+function isAdmin()
+{
+    return auth()->check() && auth()->user()->role === 'admin';
+}
+
+function isSales()
+{
+    return auth()->check() && auth()->user()->role === 'sales';
+}
+
+
+
+if (!function_exists('extractDocumentCodes')) {
+    /**
+     * Ambil semua kode dokumen dari string.
+     *
+     * @param string $text
+     * @param array|null $prefixes  // Contoh: ['RT', 'SI', 'PI'] atau null untuk bebas
+     * @return array
+     */
+    function extractDocumentCodes(string $text, array $prefixes = null): array
+    {
+        if ($prefixes && count($prefixes) > 0) {
+            // Gabungkan semua prefix jadi 1 pola regex
+            $pattern = '/(?:' . implode('|', array_map('preg_quote', $prefixes)) . ')\.\d{4}\.\d{5}/';
+        } else {
+            // Tanpa filter prefix → semua huruf kapital 2 huruf
+            $pattern = '/[A-Z]{2}\.\d{4}\.\d{5}/';
+        }
+
+        preg_match_all($pattern, $text, $matches);
+        return $matches[0] ?? [];
+    }
+}

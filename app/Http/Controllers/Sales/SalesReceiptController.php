@@ -24,10 +24,18 @@ class SalesReceiptController extends Controller
     {
         $awal  = $request->periode_awal;
         $akhir = $request->periode_akhir;
+        $customerId = $request->customer_id;
+        $collectorId = $request->collector_id;
         $query = SalesReceipt::with('customer', 'collector', 'receiptItems')
-            ->orderByDesc('tanggal');
+            ->orderByDesc('id');
         if ($awal && $akhir) {
             $query->whereBetween('tanggal', [$awal, $akhir]);
+        }
+        if ($customerId) {
+            $query->where('company_profile_id', $customerId);
+        }
+        if ($collectorId) {
+            $query->where('employee_id', $collectorId);
         }
 
         return DataTables::of($query)
@@ -40,6 +48,28 @@ class SalesReceiptController extends Controller
             ->addColumn('aksi', function ($r) {
                 return view('sales.receipts.partials.aksi', ['row' => $r])->render();
             })
+            ->filterColumn('customer', function ($query, $keyword) {
+                $query->whereHas('customer', function ($q) use ($keyword) {
+                    $q->where('name', 'like', "%{$keyword}%");
+                });
+            })
+            ->filterColumn('collector', function ($query, $keyword) {
+                $query->whereHas('collector', function ($q) use ($keyword) {
+                    $q->where('nama', 'like', "%{$keyword}%");
+                });
+            })
+            ->filterColumn('tanggal', function ($query, $keyword) {
+                $query->whereDate('tanggal', 'like', "%{$keyword}%");
+            })
+            ->filterColumn('kode', function ($query, $keyword) {
+                $query->where('kode', 'like', "%{$keyword}%");
+            })
+            ->filterColumn('total_faktur', function ($query, $keyword) {
+                $query->whereRaw('total_faktur = ?', [$keyword]);
+            })
+            ->filterColumn('total_retur', function ($query, $keyword) {
+                $query->whereRaw('total_retur = ?', [$keyword]);
+            })
             ->rawColumns(['aksi'])
             ->make(true);
     }
@@ -47,8 +77,7 @@ class SalesReceiptController extends Controller
 
     public function index()
     {
-        $receipts = SalesReceipt::with('customer', 'collector')->orderByDesc('tanggal')->paginate(20);
-        return view('sales.receipts.index', compact('receipts'));
+        return view('sales.receipts.index');
     }
 
     public function create()
@@ -115,10 +144,13 @@ class SalesReceiptController extends Controller
             $items = $data['items'];
             unset($data['items']);
 
+            $data['is_locked'] = true;
             $receipt = SalesReceipt::create($data + ['user_id' => auth()->id()]);
 
             foreach ($items as $item) {
+
                 $receipt->receiptItems()->create($item);
+
 
                 // Update SalesReceipt total_faktur and total_retur
                 $receipt->total_faktur += $item['total_faktur'];
@@ -135,7 +167,7 @@ class SalesReceiptController extends Controller
     {
         $prefix = 'SRc.' . date('ym') . '.';
         $last = SalesReceipt::where('kode', 'like', $prefix . '%')->max('kode');
-        $urut = $last ? (int)substr($last, 8) + 1 : 1;
+        $urut = $last ? (int)substr($last, 9) + 1 : 1;
         return $prefix . str_pad($urut, 5, '0', STR_PAD_LEFT);
     }
 
@@ -233,7 +265,7 @@ class SalesReceiptController extends Controller
 
     public function lock(SalesReceipt $receipt)
     {
-       if(!isSuperAdmin()) {
+        if (!isSuperAdmin()) {
             return redirect()->route('sales.receipts.show', $receipt->id)
                 ->with('error', 'Hanya super admin yang dapat mengubah status kunci faktur.');
         }
@@ -243,5 +275,30 @@ class SalesReceiptController extends Controller
 
         return redirect()->route('sales.receipts.show', $receipt->id)
             ->with('success', 'Status kunci faktur berhasil diubah.');
+    }
+
+    public function filterOptions(Request $request)
+    {
+        $awal  = $request->awal;
+        $akhir = $request->akhir;
+
+        // Ambil customer dan kolektor berdasarkan periode
+        $query = SalesReceipt::query();
+        if ($awal && $akhir) {
+            $query->whereBetween('tanggal', [$awal, $akhir]);
+        }
+
+        $customerIds = $query->distinct()->pluck('company_profile_id');
+        $collectorIds = $query->distinct()->pluck('employee_id');
+
+        // Ambil data customer dan kolektor
+        $customers = CompanyProfile::whereIn('id', $customerIds)->orderBy('name')->get(['id', 'name']);
+        $collectors = EmployeProfile::whereIn('id', $collectorIds)->orderBy('nama')->get(['id', 'nama']);
+
+
+        return response()->json([
+            'customers' => $customers,
+            'collectors' => $collectors,
+        ]);
     }
 }

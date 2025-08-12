@@ -61,7 +61,8 @@
                             <label class="fw-bold">Tipe</label>
                             <input type="text" class="form-control-plaintext" readonly value="${item.tipe_nota}">
                             <input type="hidden" name="items[${idx}][tipe_nota]" value="${item.tipe_nota}">
-                            <input type="hidden" name="items[${idx}][sales_invoice_id]" value="${item.id}">
+                            <input type="hidden" name="items[${idx}][sales_invoice_id]" value="${item.sales_invoice_id}">
+                            <input type="hidden" name="items[${idx}][id]" value="${item.id}">
                         </div>
                         <div class="col-md-2">
                             <label class="fw-bold">No Nota</label>
@@ -107,8 +108,9 @@
                         </div>
                         <div class="col-md-2">
                             <label>RETUR</label>
-                            <input name="items[${idx}][retur]" type="number" class="form-control retur-input" readonly value="${item.total_retur || 0}">
+                            <input name="items[${idx}][retur]" type="number" class="form-control retur-input" data-retur="${item.retur || 0}" value="${item.retur || 0}">
                         </div>
+                       
                         <div class="col-md-2">
                             <label>PANJAR</label>
                             <input name="items[${idx}][panjar]" type="number" class="form-control bayar-input panjar-input" min="0" value="${item.panjar ?? 0}">
@@ -123,7 +125,11 @@
                             <label>SUBTOTAL</label>
                             <input name="items[${idx}][sub_total]" type="number" class="form-control subtotal-input" readonly value="${item.sub_total ?? 0}">
                         </div>
-                        <div class="col-md-5">
+                          <div class="col-md-2">
+                            <label>RETUR di Faktur</label>
+                            <input type="number" class="form-control" value="${item.total_retur || item.invoice.total_retur}" readonly>
+                        </div>
+                        <div class="col-md-6">
                             <label>Catatan</label>
                             <input name="items[${idx}][catatan]" type="text" class="form-control catatan-input" value="${item.catatan ?? ''}">
                         </div>
@@ -149,17 +155,18 @@
         let cndn = parseFloat($card.find('.cndn-input').val()) || 0;
         let panjar = parseFloat($card.find('.panjar-input').val()) || 0;
         let lainnya = parseFloat($card.find('.lainnya-input').val()) || 0;
-        // let retur = parseFloat($card.find('.retur-input').val()) || 0;
+
+        let retur = parseFloat($card.find('.retur-input').val()) || 0;
         let nilaiNota = parseFloat($card.find('.nilai-nota').val()) || 0;
 
-        let sisaOld = parseFloat($card.find('.sisa-db').val()) || 0;
+        let sisaOld = parseFloat($card.find('.nilai-nota').val()) || 0;
 
         // Get sisa from the card
 
         // Calculate subtotal and sisa
-        let subtotal = tunai + bank + giro + cndn + panjar + lainnya;
+        let subtotal = tunai + bank + giro + cndn + panjar + lainnya + retur;
         let sisa = sisaOld - subtotal;
-        console.log(`Subtotal: ${subtotal}, Sisa: ${sisa}`, `nilaiNota: ${nilaiNota}`);
+        console.log(subtotal, sisaOld, sisa)
 
         $card.find('.subtotal-input').val(subtotal.toFixed(2));
         $card.find('.sisa-input').val(sisa.toFixed(2));
@@ -181,6 +188,18 @@
             calcSubtotalAndSisa(idx);
         });
         // TODO: Add other JS as needed (fetch nota, etc)
+    });
+
+    // Remove nota from list
+    $('#selected-nota-list').on('click', '.btn-remove-nota', function() {
+        // Get the card index in the current list
+        let idx = $(this).closest('.card').index();
+
+        // Remove from notaList array
+        notaList.splice(idx, 1);
+
+        // Re-render the list from the updated array
+        renderSelectedNota();
     });
 
     @if(count($items))

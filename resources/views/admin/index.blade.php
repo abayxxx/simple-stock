@@ -18,6 +18,7 @@
                 <th>Name</th>
                 <th>Email</th>
                 <th>Role</th>
+                <th>Cabang</th>
                 <th>Aksi</th>
             </tr>
         </thead>
@@ -44,6 +45,10 @@
                 {
                     data: 'role',
                     name: 'role'
+                },
+                {
+                    data: 'cabang', // Assuming company_branch relationship is defined in User model
+                    name: 'cabang'
                 },
                 {
                     data: 'aksi',

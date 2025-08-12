@@ -74,11 +74,16 @@ class SalesGroupController extends Controller
 
     private function validateSalesGroup(Request $request, $id = null)
     {
-        return $request->validate([
-            'nama' => 'required|string|max:255',
-            'catatan' => 'nullable|string|max:500',
-            'pegawai_ids' => 'nullable|array',
-            'pegawai_ids.*' => 'exists:employe_profiles,id'
-        ]);
+        try {
+            $data = $request->validate([
+                'nama' => 'required|string|max:255',
+                'catatan' => 'nullable|string|max:500',
+                'pegawai_ids' => 'nullable|array',
+                'pegawai_ids.*' => 'exists:employe_profiles,id'
+            ]);
+        } catch (\Throwable $th) {
+            return redirect()->back()->withErrors($th->getMessage())->withInput();
+        }
+        return $data;
     }
 }

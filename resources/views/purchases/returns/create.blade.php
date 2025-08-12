@@ -10,7 +10,7 @@
     @include('purchases.returns.partials.form', [
     'return' => null,
     'suppliers' => $suppliers,
-    'products' => $products,
+    'products' => null,
     'branches' => $branches,
     'invoices' => $invoices
     ])

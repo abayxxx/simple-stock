@@ -22,6 +22,7 @@ class User extends Authenticatable
         'email',
         'password',
         'role', // Added role attribute
+        'company_branch_id', // Added company branch ID attribute
     ];
 
     /**
@@ -45,5 +46,14 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+
+    /**
+     * Get the company branch associated with the user.
+     */
+    public function companyBranch()
+    {
+        return $this->belongsTo(CompanyBranch::class, 'company_branch_id'); // Define the relationship with CompanyBranch model
     }
 }

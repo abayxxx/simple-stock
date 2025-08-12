@@ -11,7 +11,7 @@
     <form method="POST" action="{{ route('management.users.update', $user->id) }}">
         @csrf
         @method('PUT')
-        @include('admin.partials.form')
+        @include('admin.partials.form', ['user' => $user, 'branch' => $branch ?? []]) <!-- Pass branch data if available -->
         <button class="btn btn-success">Update Admin User</button>
         <a href="{{ route('management.users.index') }}" class="btn btn-secondary">Kembali</a>
     </form>

@@ -5,6 +5,10 @@ namespace App\Http\Controllers\Stocks;
 use App\Http\Controllers\Controller;
 use App\Models\CompanyBranch;
 use App\Models\Product;
+use App\Models\PurchasesInvoice;
+use App\Models\PurchasesReturn;
+use App\Models\SalesInvoice;
+use App\Models\SalesReturn;
 use App\Models\Stock;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -13,9 +17,8 @@ class StockCardController extends Controller
 {
     public function index(Request $request)
     {
-        $products = Product::orderBy('nama')->get();
         $branches = CompanyBranch::orderBy('name')->get();
-        return view('stocks.cards.index', compact('products', 'branches'));
+        return view('stocks.cards.index', compact('branches'));
     }
 
     public function datatable(Request $request)
@@ -56,11 +59,39 @@ class StockCardController extends Controller
             $total_masuk += $masuk;
             $total_keluar += $keluar;
 
+            $code = extractDocumentCodes($r->catatan, ['RT', 'SI', 'PI']);
+
+            // get nama customer/supplier dari code dokumen
+            $nama_customer_supplier = 'Tidak ada Nama';
+
+            if (!empty($code)) {
+                $docCode = $code[0];
+                if (str_starts_with($docCode, 'RT')) {
+                    if ($r->type === 'out') {
+                        $nama_customer_supplier = optional(
+                            PurchasesReturn::where('kode', $docCode)->first()
+                        )->supplier()->value('name') ?? 'Tidak ada Nama';
+                    } else {
+                        $nama_customer_supplier = optional(
+                            SalesReturn::where('kode', $docCode)->first()
+                        )->customer()->value('name') ?? 'Tidak ada Nama';
+                    }
+                } elseif (str_starts_with($docCode, 'SI')) {
+                    $nama_customer_supplier = optional(
+                        SalesInvoice::where('kode', $docCode)->first()
+                    )->customer()->value('name') ?? 'Tidak ada Nama';
+                } elseif (str_starts_with($docCode, 'PI')) {
+                    $nama_customer_supplier = optional(
+                        PurchasesInvoice::where('kode', $docCode)->first()
+                    )->supplier()->value('name') ?? 'Tidak ada Nama';
+                }
+            }
+
             $result[] = [
                 'tanggal' => $r->created_at->format('Y-m-d H:i:s'),
-                'transaksi_dari' => $r->transaksi_dari ?? ($r->type == 'in' ? '<span class="text-success">Stock Masuk</span>' : '<span class="text-danger">Stock Keluar</span>'), // set di Stock
-                'no_transaksi'   => $r->no_transaksi ?? 'Tidak ada No Transaksi',   // set di Stock
-                'nama'           => $r->nama_customer_supplier ?? 'Tidak ada Nama', // set di Stock
+                'tipe_stock' => ($r->type == 'in' ? '<span class="text-success">Stock Masuk</span>' : '<span class="text-danger">Stock Keluar</span>'), // set di Stock
+                'catatan'   => $r->catatan ?? 'Tidak ada Catatan',   // set di Stock
+                'nama'           => $nama_customer_supplier ?: 'Tidak ada Nama',
                 'masuk' => $masuk ? $masuk . ' ' . $r->product->satuan_kecil : '',
                 'keluar' => $keluar ? $keluar . ' ' . $r->product->satuan_kecil : '',
                 'sisa'   => $saldo . ' ' . $r->product->satuan_kecil,

@@ -41,4 +41,21 @@ class PurchasesInvoice extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function paymentItems()
+    {
+    return $this->hasMany(PurchasesPaymentItem::class, 'purchases_invoice_id');
+    }
+
+    public function latestPayment()
+    {
+        return $this->hasOneThrough(
+        PurchasesPayment::class,
+        PurchasesPaymentItem::class,
+        'purchases_invoice_id', // FK di purchases_payment_items
+        'id',               // PK di purchases_payment
+        'id',               // PK di purchases_invoices
+        'purchases_payment_id'  // FK di purchases_payment_items
+        )->latest('purchases_payments.created_at');
+    }
 }

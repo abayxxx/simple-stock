@@ -17,15 +17,7 @@ $existingItems = old('items', isset($invoice) ? $invoice->items->toArray() : [])
     <!-- Options will be loaded dynamically by Select2 -->
             </select>
         </div>
-        <div class="col-md-3 mb-2">
-            <label>Lokasi</label>
-            <select id="add-lokasi_id" class="form-control select-lokasi">
-                <option value="">-- Pilih Lokasi --</option>
-                @foreach($branches as $b)
-                <option value="{{ $b->id }}">{{ $b->name }}</option>
-                @endforeach
-            </select>
-        </div>
+       
         <div class="col-md-2 mb-2">
             <label>No Seri</label>
             <select id="add-no_seri" class="form-control select-no-seri">
@@ -120,7 +112,6 @@ $existingItems = old('items', isset($invoice) ? $invoice->items->toArray() : [])
         <thead>
             <tr>
                 <th>Produk</th>
-                <th>Lokasi</th>
                 <th>No Seri</th>
                 <th>Expired</th>
                 <th>Qty</th>
@@ -161,15 +152,14 @@ $existingItems = old('items', isset($invoice) ? $invoice->items->toArray() : [])
 
     // For edit: load items from backend
     let existingItems = @json($existingItems);
-    let products = @json($products->keyBy('id'));
-    let branches = @json($branches->keyBy('id'));
+    let products = @json(collect($products)->keyBy('id'));
+    let branches = @json(collect($branches)->keyBy('id'));
 
     function renderReviewRow(item, idx) {
         let produk = products[item.product_id] ? (products[item.product_id].kode + ' - ' + products[item.product_id].nama) : '';
         let lokasi = branches[item.lokasi_id] ? branches[item.lokasi_id].name : '';
         return `<tr data-index="${idx}">
         <td style="white-space:nowrap">${produk}</td>
-        <td style="white-space:nowrap">${lokasi}</td>
         <td>${item.no_seri||''}</td>
         <td>${item.tanggal_expired||''}</td>
         <td>${item.qty||''}</td>
@@ -221,7 +211,6 @@ $existingItems = old('items', isset($invoice) ? $invoice->items->toArray() : [])
     $('#btn-add-item').click(function() {
         let item = {
             product_id: $('#add-product_id').val(),
-            lokasi_id: $('#add-lokasi_id').val(),
             no_seri: $('#add-no_seri').val(),
             tanggal_expired: $('#add-tanggal_expired').val(),
             qty: $('#add-qty').val(),
@@ -242,7 +231,7 @@ $existingItems = old('items', isset($invoice) ? $invoice->items->toArray() : [])
             catatan: $('#add-catatan').val()
         };
         // Validation example
-        if (!item.product_id || !item.lokasi_id || !item.qty || !item.harga_satuan) {
+        if (!item.product_id  || !item.qty || !item.harga_satuan || !item.tanggal_expired || !item.no_seri) {
             alert('Lengkapi data item terlebih dahulu.');
             return;
         }

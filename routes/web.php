@@ -22,6 +22,9 @@ use App\Http\Controllers\Sales\SalesDetailController;
 use App\Http\Controllers\Sales\SalesUnpaidController;
 use App\Http\Controllers\Settings\SettingsController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Finances\ReceiveableReportController;
+use App\Http\Controllers\Finances\DebtReportController;
+
 
 Route::get('/', function () {
     return view('auth.login');
@@ -100,7 +103,8 @@ Route::middleware('auth')->group(function () {
             //Print
             Route::get('invoices/{invoice}/print', [SalesInvoiceController::class, 'print'])->name('invoices.print');
 
-
+            Route::get('invoices/filter-options', [SalesInvoiceController::class, 'filterOptions'])
+                ->name('invoices.filter-options');
             Route::resource('invoices', SalesInvoiceController::class);
 
             // *Sales Returns*
@@ -111,6 +115,9 @@ Route::middleware('auth')->group(function () {
 
 
             Route::get('returns/invoice-product-options/{salesInvoiceId}/{productId}', [SalesReturnController::class, 'getReturnProductBatchOptions']);
+
+            Route::get('returns/filter-options', [SalesReturnController::class, 'filterOptions'])
+                ->name('returns.filter-options');
             Route::resource('returns', SalesReturnController::class);
 
 
@@ -119,12 +126,15 @@ Route::middleware('auth')->group(function () {
             Route::get('receipts/tarik-faktur-options', [SalesReceiptController::class, 'tarikFakturOptions'])->name('receipts.tarik_faktur_options');
             Route::get('receipts/{receipt}/print', [SalesReceiptController::class, 'print'])->name('receipts.print');
             Route::get('receipts/{receipt}/lock', [SalesReceiptController::class, 'lock'])->name('receipts.lock');
+            Route::get('receipts/filter-options', [SalesReceiptController::class, 'filterOptions'])
+                ->name('receipts.filter-options');
             Route::resource('receipts', SalesReceiptController::class);
 
             // *Payments*
             Route::get('payments/datatable', [SalesPaymentController::class, 'datatable'])->name('payments.datatable');
             Route::get('payments/tarik-nota-options', [SalesPaymentController::class, 'tarikNotaOptions'])->name('payments.tarik_nota_options');
             Route::get('payments/{payment}/print', [SalesPaymentController::class, 'print'])->name('payments.print');
+            Route::get('payments/filter-options', [SalesPaymentController::class, 'filterOptions'])->name('payments.filter-options');
             Route::resource('payments', SalesPaymentController::class);
 
             // *Detail*
@@ -142,6 +152,8 @@ Route::middleware('auth')->group(function () {
         Route::group(['prefix' => 'purchases', 'as' => 'purchases.'], function () {
             Route::get('invoices/datatable', [PurchasesInvoiceController::class, 'datatable'])->name('invoices.datatable');
             Route::get('invoices/{invoice}/print', [PurchasesInvoiceController::class, 'print'])->name('invoices.print');
+            Route::get('invoices/filter-options', [PurchasesInvoiceController::class, 'filterOptions'])
+                ->name('invoices.filter-options');
             Route::resource('invoices', PurchasesInvoiceController::class);
 
             // *Return
@@ -152,7 +164,8 @@ Route::middleware('auth')->group(function () {
 
 
             Route::get('returns/invoice-product-options/{purchasesInvoiceId}/{productId}', [PurchasesReturnController::class, 'getReturnProductBatchOptions']);
-
+            Route::get('returns/filter-options', [PurchasesReturnController::class, 'filterOptions'])
+                ->name('returns.filter-options');
             Route::resource('returns', PurchasesReturnController::class);
 
 
@@ -160,6 +173,7 @@ Route::middleware('auth')->group(function () {
             Route::get('payments/datatable', [PurchasesPaymentController::class, 'datatable'])->name('payments.datatable');
             Route::get('payments/tarik-nota-options', [PurchasesPaymentController::class, 'tarikNotaOptions'])->name('payments.tarik_nota_options');
             Route::get('payments/{payment}/print', [PurchasesPaymentController::class, 'print'])->name('payments.print');
+            Route::get('payments/filter-options', [PurchasesPaymentController::class, 'filterOptions'])->name('payments.filter-options');
             Route::resource('payments', PurchasesPaymentController::class);
         });
 
@@ -175,6 +189,13 @@ Route::middleware('auth')->group(function () {
         Route::group(['prefix' => 'management', 'as' => 'management.'], function () {
             Route::get('datatable', [UserController::class, 'datatable'])->name('users.datatable');
             Route::resource('users', UserController::class)->except(['show']);
+        });
+
+        // *Finances*
+        Route::group(['prefix' => 'finances', 'as' => 'finances.'], function () {
+            Route::get('receivables', [ReceiveableReportController::class, 'index'])->name('receivables.index');
+
+            Route::get('debt', [DebtReportController::class, 'index'])->name('debt.index');
         });
     });
 });

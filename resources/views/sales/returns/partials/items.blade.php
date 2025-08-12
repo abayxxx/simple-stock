@@ -147,7 +147,7 @@ $existingItems = old('items', isset($return) ? $return->items->toArray() : []);
     $(function() {
 
         let itemIndex = 0;
-        let products = @json($products->keyBy('id'));
+        let products = @json(collect($products)->keyBy('id'));
 
 
         // -- Restore existing items for edit/validation

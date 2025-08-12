@@ -1,3 +1,12 @@
+@if ($errors->any())
+<div class="alert alert-danger">
+    <ul>
+        @foreach ($errors->all() as $error)
+        <li>{{ $error }}</li>
+        @endforeach
+    </ul>
+</div>
+@endif
 <form method="POST" action="{{ $receipt ? route('sales.receipts.update', $receipt->id) : route('sales.receipts.store') }}" class="form-horizontal">
     @if($receipt)
     @method('PUT')

@@ -14,7 +14,7 @@
             @include('sales.invoices.partials.form', [
             'customers' => $customers,
             'salesGroups' => $salesGroups,
-            'products' => $products,
+            'products' => null,
             'branches' => $branches,
             'invoice' => null
             ])

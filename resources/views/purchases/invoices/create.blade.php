@@ -22,7 +22,7 @@
             @endif
             @include('purchases.invoices.partials.form', [
             'suppliers' => $suppliers,
-            'products' => $products,
+            'products' => null,
             'branches' => $branches,
             'invoice' => null
             ])

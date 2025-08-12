@@ -31,10 +31,15 @@ class CompanyBranchController extends Controller
 
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'address' => 'nullable|string|max:255',
-        ]);
+        try {
+            $data = $request->validate([
+                'name' => 'required|string|max:255',
+                'address' => 'nullable|string|max:255',
+            ]);
+        } catch (\Throwable $th) {
+            return redirect()->back()->withErrors($th->getMessage())->withInput();
+        }
+
         CompanyBranch::create($data);
         return redirect()->route('company_branches.index')->with('success', 'Cabang berhasil ditambahkan.');
     }
@@ -46,10 +51,15 @@ class CompanyBranchController extends Controller
 
     public function update(Request $request, CompanyBranch $company_branch)
     {
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'address' => 'nullable|string|max:255',
-        ]);
+        try {
+            $data = $request->validate([
+                'name' => 'required|string|max:255',
+                'address' => 'nullable|string|max:255',
+            ]);
+        } catch (\Throwable $th) {
+            return redirect()->back()->withErrors($th->getMessage())->withInput();
+        }
+
         $company_branch->update($data);
         return redirect()->route('company_branches.index')->with('success', 'Cabang berhasil diupdate.');
     }

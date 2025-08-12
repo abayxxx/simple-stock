@@ -12,9 +12,7 @@
                 <label>Produk</label>
                 <select id="select-product" name="product_id" class="form-control">
                     <option value="">-- Pilih Produk --</option>
-                    @foreach($products as $p)
-                    <option value="{{ $p->id }}">{{ $p->kode }} - {{ $p->nama }}</option>
-                    @endforeach
+
                 </select>
             </div>
             <!-- <div class="col-md-2">
@@ -72,6 +70,7 @@
 
 @push('js')
 <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script>
     function reloadKartuStok() {
@@ -86,8 +85,8 @@
             res.data.forEach(r => {
                 rows += `<tr>
                 <td>${r.tanggal}</td>
-                <td>${r.transaksi_dari}</td>
-                <td>${r.no_transaksi}</td>
+                <td>${r.tipe_stock}</td>
+                <td>${r.catatan}</td>
                 <td>${r.nama}</td>
                 <td>${r.masuk}</td>
                 <td>${r.keluar}</td>
@@ -104,10 +103,64 @@
     $('#filter-form select, #filter-form input').on('change', reloadKartuStok);
     $(function() {
         reloadKartuStok();
+
+        $('#select-product').select2({
+            placeholder: '-- Pilih Produk --',
+            minimumInputLength: 2,
+            ajax: {
+                url: '{{ url("admin/products/search") }}',
+                dataType: 'json',
+                delay: 250,
+                data: function(params) {
+                    return {
+                        q: params.term // user typed text
+                    };
+                },
+                processResults: function(data) {
+                    // Expect: [{id:1, text:"001-Produk A", satuan_kecil:"pcs"}, ...]
+                    return {
+                        results: data.map(function(p) {
+                            return {
+                                id: p.id,
+                                text: p.kode + ' - ' + p.nama,
+                                satuan_kecil: p.satuan_kecil
+                            }
+                        })
+                    };
+                }
+            }
+        });
     });
 </script>
 @endpush
 
 @push('css')
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css" />
+<style>
+    /* Match Select2 single select to Bootstrap 4/5 .form-control */
+    .select2-container--default .select2-selection--single {
+        height: 38px !important;
+        /* Default Bootstrap 4/5 input height */
+        padding: 6px 12px !important;
+        font-size: 1rem !important;
+        border: 1px solid #ced4da !important;
+        border-radius: 0.25rem !important;
+        /* For Bootstrap 4, use 0.375rem for Bootstrap 5 */
+        display: flex;
+        align-items: center;
+        box-sizing: border-box;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 24px !important;
+        padding-left: 0 !important;
+    }
+
+    .select2-selection__arrow {
+        height: 36px !important;
+        right: 6px;
+        top: 1px;
+    }
+</style>
 @endpush

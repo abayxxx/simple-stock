@@ -21,27 +21,83 @@ class SalesInvoiceController extends Controller
 
     public function datatable(Request $request)
     {
-        $awal  = $request->periode_awal;
-        $akhir = $request->periode_akhir;
-        $query = SalesInvoice::with('customer', 'salesGroup');
+        $awal          = $request->periode_awal;
+        $akhir         = $request->periode_akhir;
+        $customerId    = $request->customer_id;     // from #filter_customer
+        $lokasiId      = $request->lokasi_id;       // from #filter_lokasi
+        $salesGroupId  = $request->sales_group_id;  // from #filter_sg
+
+        $query = SalesInvoice::with(['customer', 'location', 'salesGroup'])->orderByDesc('id');
 
         if ($awal && $akhir) {
             $query->whereBetween('tanggal', [$awal, $akhir]);
+        }
+        if ($customerId) {
+            $query->where('company_profile_id', $customerId);
+        }
+        if ($lokasiId) {
+            $query->where('lokasi_id', $lokasiId);
+        }
+        if ($salesGroupId) {
+            $query->where('sales_group_id', $salesGroupId);
         }
 
         return DataTables::of($query)
             ->editColumn('tanggal', fn($r) => tanggal_indo($r->tanggal))
             ->addColumn('customer', fn($r) => $r->customer->name ?? '-')
+            ->addColumn('lokasi', fn($r) => $r->lokasi_id ? $r->location->name : '-')
             ->addColumn('sales_group', fn($r) => $r->salesGroup->nama ?? '-')
             ->editColumn('grand_total', fn($r) => number_format($r->grand_total, 2, ',', '.'))
             ->editColumn('total_retur', fn($r) => number_format($r->total_retur, 2, ',', '.'))
             ->editColumn('total_bayar', fn($r) => number_format($r->total_bayar, 2, ',', '.'))
             ->editColumn('sisa_tagihan', fn($r) => number_format($r->sisa_tagihan, 2, ',', '.'))
             ->editColumn('created_at', fn($r) => $r->created_at->format('d M Y H:i'))
-            ->addColumn('aksi', function ($r) {
-                // Gunakan partial agar rapi
-                return view('sales.invoices.partials.aksi', ['row' => $r])->render();
+            ->addColumn('tgl_pembayaran', fn($r) => $r->paymentItems->count() > 0 ? $r->latestPayment()->first()->created_at->format('d M Y H:i') : '-')
+
+            // 🔎 Make related columns searchable
+            ->filterColumn('customer', function ($q, $keyword) {
+                $q->whereHas('customer', fn($qq) => $qq->where('name', 'like', "%{$keyword}%"));
             })
+            ->filterColumn('lokasi', function ($q, $keyword) {
+                $q->whereHas('location', fn($qq) => $qq->where('name', 'like', "%{$keyword}%"));
+            })
+            ->filterColumn('sales_group', function ($q, $keyword) {
+                $q->whereHas('salesGroup', fn($qq) => $qq->where('nama', 'like', "%{$keyword}%"));
+            })
+
+            // 🔎 Make formatted date searchable (search by raw date or formatted string)
+            ->filterColumn('tanggal', function ($q, $keyword) {
+                // match 'YYYY-MM-DD' or Indonesian formatted text
+                $q->where(function ($qq) use ($keyword) {
+                    $qq->where('tanggal', 'like', "%{$keyword}%")
+                        ->orWhereRaw("DATE_FORMAT(tanggal, '%d %b %Y') like ?", ["%{$keyword}%"]);
+                });
+            })
+            ->filterColumn('created_at', function ($q, $keyword) {
+                $q->whereRaw("DATE_FORMAT(created_at, '%d %b %Y %H:%i') like ?", ["%{$keyword}%"]);
+            })
+            ->filterColumn('tgl_pembayaran', function ($q, $keyword) {
+                $q->whereHas('paymentItems.payment', function ($qq) use ($keyword) {
+                    $qq->whereRaw("DATE_FORMAT(created_at, '%d %b %Y %H:%i') like ?", ["%{$keyword}%"]);
+                });
+                // ^ adjust relation path if needed (e.g. latestPayment relation)
+            })
+
+            // 🔎 Make formatted numbers searchable
+            ->filterColumn('grand_total', function ($q, $keyword) {
+                $q->whereRaw('CAST(grand_total AS CHAR) like ?', ["%{$keyword}%"]);
+            })
+            ->filterColumn('total_retur', function ($q, $keyword) {
+                $q->whereRaw('CAST(total_retur AS CHAR) like ?', ["%{$keyword}%"]);
+            })
+            ->filterColumn('total_bayar', function ($q, $keyword) {
+                $q->whereRaw('CAST(total_bayar AS CHAR) like ?', ["%{$keyword}%"]);
+            })
+            ->filterColumn('sisa_tagihan', function ($q, $keyword) {
+                $q->whereRaw('CAST(sisa_tagihan AS CHAR) like ?', ["%{$keyword}%"]);
+            })
+
+            ->addColumn('aksi', fn($r) => view('sales.invoices.partials.aksi', ['row' => $r])->render())
             ->rawColumns(['grand_total', 'total_retur', 'total_bayar', 'sisa_tagihan', 'aksi'])
             ->make(true);
     }
@@ -49,20 +105,17 @@ class SalesInvoiceController extends Controller
 
     public function index()
     {
-        $invoices = SalesInvoice::with('customer', 'salesGroup', 'user')->latest()->paginate(20);
-        return view('sales.invoices.index', compact('invoices'));
+        return view('sales.invoices.index');
     }
 
     public function create()
     {
         $customers = CompanyProfile::orderBy('name')->get();
         $salesGroups = SalesGroup::orderBy('nama')->get();
-        $products = Product::with('stocks')->whereHas('stocks', function ($query) {
-            $query->where('type', 'in'); // Hanya produk yang memiliki stok masuk
-        })->orderBy('nama')->get();
+       
         $branches = CompanyBranch::orderBy('name')->get();
 
-        return view('sales.invoices.create', compact('customers', 'salesGroups', 'products', 'branches'));
+        return view('sales.invoices.create', compact('customers', 'salesGroups', 'branches'));
     }
 
     public function store(Request $request)
@@ -73,6 +126,7 @@ class SalesInvoiceController extends Controller
             'tanggal' => 'required|date',
             'company_profile_id' => 'required|integer',
             'sales_group_id' => 'nullable|integer',
+            'lokasi_id' => 'nullable|integer',
             'term' => 'nullable|string|max:50',
             'is_tunai' => 'boolean',
             'no_po' => 'nullable|string|max:100',
@@ -135,9 +189,10 @@ class SalesInvoiceController extends Controller
                 // 1. Cek sisa stok PER BATCH
                 $sisa = $this->getSisaStokBatch($item['product_id'], $item['no_seri'] ?? null, $item['tanggal_expired'] ?? null);
 
+
                 if ($item['qty'] > $sisa) {
                     throw \Illuminate\Validation\ValidationException::withMessages([
-                        "items.*.qty" => "Stok tidak cukup untuk produk {$item['product_id']} di lokasi/seri/expired yang dipilih. Sisa: $sisa"
+                        "items.*.qty" => "Stok tidak cukup untuk produk {$item['product_id']} di seri/expired yang dipilih. Sisa: $sisa"
                     ]);
                 }
 
@@ -174,9 +229,8 @@ class SalesInvoiceController extends Controller
     {
         $customers = CompanyProfile::orderBy('name')->get();
         $salesGroups = SalesGroup::orderBy('nama')->get();
-        $products = Product::with('stocks')->whereHas('stocks', function ($query) {
-            $query->where('type', 'in'); // Hanya produk yang memiliki stok masuk
-        })->orderBy('nama')->get();
+        // load only products in purchases invoice
+        $products = Product::whereIn('id', $invoice->items->pluck('product_id'))->orderBy('nama')->get();
         $branches = CompanyBranch::orderBy('name')->get();
         $invoice->load('items');
         return view('sales.invoices.edit', compact('invoice', 'customers', 'salesGroups', 'products', 'branches'));
@@ -192,6 +246,7 @@ class SalesInvoiceController extends Controller
             'tanggal' => 'required|date',
             'company_profile_id' => 'required|integer',
             'sales_group_id' => 'nullable|integer',
+            'lokasi_id' => 'nullable|integer',
             'term' => 'nullable|string|max:50',
             'is_tunai' => 'boolean',
             'no_po' => 'nullable|string|max:100',
@@ -319,8 +374,8 @@ class SalesInvoiceController extends Controller
     private function getSisaStokBatch($product_id, $no_seri = null, $tanggal_expired = null)
     {
         $q = Stock::where('product_id', $product_id);
-        if ($no_seri) $q->where('no_seri', $no_seri);
-        if ($tanggal_expired) $q->where('tanggal_expired', $tanggal_expired);
+        // if ($no_seri) $q->where('no_seri', $no_seri);
+        // if ($tanggal_expired) $q->where('tanggal_expired', $tanggal_expired);
 
         $in     = (clone $q)->where('type', 'in')->sum('jumlah');
         $out    = (clone $q)->where('type', 'out')->sum('jumlah');
@@ -335,8 +390,8 @@ class SalesInvoiceController extends Controller
     {
         $query = Stock::query()
             ->where('product_id', $product_id);
-        if ($no_seri) $query->where('no_seri', $no_seri);
-        if ($tanggal_expired) $query->where('tanggal_expired', $tanggal_expired);
+        // if ($no_seri) $query->where('no_seri', $no_seri);
+        // if ($tanggal_expired) $query->where('tanggal_expired', $tanggal_expired);
 
         $stocks = $query->orderBy('id')->get();
         $runningSisa = 0;
@@ -355,5 +410,34 @@ class SalesInvoiceController extends Controller
     {
         $invoice = SalesInvoice::with(['customer', 'items.product', 'salesGroup'])->findOrFail($id);
         return view('sales.invoices.print', compact('invoice'));
+    }
+
+    public function filterOptions(Request $request)
+    {
+        $awal  = $request->awal;
+        $akhir = $request->akhir;
+
+        $base = SalesInvoice::query();
+        if ($awal && $akhir) {
+            $base->whereBetween('tanggal', [$awal, $akhir]);
+        }
+
+        // Distinct keys from invoices in range
+        $customerIds   = (clone $base)->whereNotNull('company_profile_id')->distinct()->pluck('company_profile_id');
+        $locationIds   = (clone $base)->whereNotNull('lokasi_id')->distinct()->pluck('lokasi_id');
+        $salesGroupIds = (clone $base)->whereNotNull('sales_group_id')->distinct()->pluck('sales_group_id');
+
+        // Fetch display names
+        $customers   = CompanyProfile::whereIn('id', $customerIds)->orderBy('name')->get(['id', 'name']);
+        $locations   = CompanyBranch::whereIn('id', $locationIds)->orderBy('name')->get(['id', 'name']);
+        $salesGroups = SalesGroup::whereIn('id', $salesGroupIds)->orderBy('nama')->get(['id', 'nama']);
+
+
+
+        return response()->json([
+            'customers'    => $customers,
+            'locations'    => $locations,
+            'sales_groups' => $salesGroups,
+        ]);
     }
 }

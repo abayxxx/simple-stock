@@ -143,7 +143,7 @@
 <script>
 $(function() {
     let itemIndex = 0;
-    let products = @json($products->keyBy('id'));
+    let products = @json(collect($products)->keyBy('id'));
 
     // --- Restore existing items for edit/validation
     let existingItems = @json($existingItems);

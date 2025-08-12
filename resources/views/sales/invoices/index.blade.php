@@ -14,13 +14,41 @@
     <a href="{{ route('sales.invoices.create') }}" class="btn btn-primary"><i class="fa fa-plus"></i> Tambah Tanda Terima</a>
 </div>
 <div class="card shadow">
-    <div class="card-header d-flex align-items-center">
-        <div>
-            <input type="date" id="periode_awal" class="form-control d-inline-block" style="width:140px">
-            s/d
-            <input type="date" id="periode_akhir" class="form-control d-inline-block" style="width:140px">
+    <div class="card-header">
+        <div class="row g-2 align-items-center">
+
+            <!-- Date range -->
+            <div class="col-12 col-md-auto d-flex align-items-center gap-2">
+                <input type="date" id="periode_awal" class="form-control" style="min-width:140px">
+                <span class="text-nowrap">s/d</span>
+                <input type="date" id="periode_akhir" class="form-control" style="min-width:140px">
+            </div>
+
+            <!-- Supplier -->
+            <div class="col-12 col-sm-6 col-md-auto">
+                <select id="filter_customer" class="form-select w-100 form-control">
+                    <option value="">Semua Customer</option>
+                </select>
+            </div>
+
+            <!-- Lokasi -->
+            <div class="col-12 col-sm-6 col-md-auto">
+                <select id="filter_lokasi" class="form-select w-100 form-control">
+                    <option value="">Semua Lokasi</option>
+                </select>
+            </div>
+
+            <!-- Sales Group -->
+            <div class="col-12 col-sm-6 col-md-auto">
+                <select id="filter_sg" class="form-select w-100 form-control">
+                    <option value="">Semua Sales Group</option>
+                </select>
+            </div>
+
         </div>
     </div>
+
+
     <div class="card-body p-2 table-responsive">
         <table id="tabel-faktur" class="table table-sm table-bordered">
             <thead class="bg-light text-center align-middle">
@@ -28,6 +56,7 @@
                     <th>TANGGAL</th>
                     <th>NO.</th>
                     <th>NAMA</th>
+                    <th>LOKASI</th>
                     <th>JATUH TEMPO</th>
                     <th>NAMA SG</th>
                     <th>GRAND TOTAL</th>
@@ -35,16 +64,18 @@
                     <th>PEMBAYARAN</th>
                     <th>SISA</th>
                     <th>TGL. INPUT</th>
+                    <th>TGL. PEMBAYARAN</th>
                     <th>AKSI</th>
                 </tr>
             </thead>
             <tfoot class="bg-light">
                 <tr>
-                    <th colspan="5" class="text-end">TOTAL</th>
+                    <th colspan="6" class="text-end">TOTAL</th>
                     <th id="footer-grandtotal" class="text-end"></th>
                     <th id="footer-retur" class="text-end"></th>
                     <th id="footer-bayar" class="text-end"></th>
                     <th id="footer-sisa" class="text-end"></th>
+                    <th></th>
                     <th></th>
                     <th></th>
                 </tr>
@@ -68,6 +99,9 @@
                 data: function(d) {
                     d.periode_awal = $('#periode_awal').val();
                     d.periode_akhir = $('#periode_akhir').val();
+                    d.customer_id = $('#filter_customer').val();
+                    d.lokasi_id = $('#filter_lokasi').val();
+                    d.sales_group_id = $('#filter_sg').val();
                 }
             },
             paging: true,
@@ -95,6 +129,11 @@
                     data: 'customer',
                     className: 'align-middle',
                     width: '17%'
+                },
+                {
+                    data: 'lokasi',
+                    className: 'text-center align-middle',
+                    width: '10%'
                 },
                 {
                     data: 'jatuh_tempo',
@@ -132,6 +171,11 @@
                     width: '8%'
                 },
                 {
+                    data: 'tgl_pembayaran',
+                    className: 'text-center align-middle',
+                    width: '10%'
+                },
+                {
                     data: 'aksi',
                     orderable: false,
                     searchable: false,
@@ -143,10 +187,10 @@
             drawCallback: function(settings) {
                 // Footer summary total
                 let api = this.api();
-                let colGrand = 5,
-                    colRetur = 6,
-                    colBayar = 7,
-                    colSisa = 8;
+                let colGrand = 6,
+                    colRetur = 7,
+                    colBayar = 8,
+                    colSisa = 9;
 
                 function intVal(i) {
                     if (typeof i === 'string') {
@@ -199,9 +243,45 @@
 
         // Filter date on change
         $('#periode_awal, #periode_akhir').on('change', function() {
+            loadFilterOptions();
             table.ajax.reload();
 
         });
+
+        function loadFilterOptions() {
+            const awal = $('#periode_awal').val();
+            const akhir = $('#periode_akhir').val();
+            // if (!awal || !akhir) {
+            //     // Optional: clear dropdowns if date range incomplete
+            //     return;
+            // }
+
+            $.get("{{ route('sales.invoices.filter-options') }}", {
+                awal,
+                akhir
+            }, function(res) {
+                // res: { customers: [{id,name}], locations: [{id,name}], sales_groups: [{id,nama}] }
+                const $sup = $('#filter_customer').empty().append('<option value="">Semua Customer</option>');
+                res.customers.forEach(o => $sup.append(`<option value="${o.id}">${o.name}</option>`));
+
+                const $lok = $('#filter_lokasi').empty().append('<option value="">Semua Lokasi</option>');
+                res.locations.forEach(o => $lok.append(`<option value="${o.id}">${o.name}</option>`));
+
+                const $sg = $('#filter_sg').empty().append('<option value="">Semua Sales Group</option>');
+                res.sales_groups.forEach(o => $sg.append(`<option value="${o.id}">${o.nama}</option>`));
+
+                // after refresh options, reload table with new filters
+                table.ajax.reload();
+            });
+        }
+
+        // reload table when any dropdown changes
+        $('#filter_customer, #filter_lokasi, #filter_sg').on('change', function() {
+            table.ajax.reload();
+        });
+
+        // optional: first load (if you want them empty until dates picked, you can skip this)
+        loadFilterOptions();
     });
 </script>
 @endpush

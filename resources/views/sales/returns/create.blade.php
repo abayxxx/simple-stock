@@ -11,7 +11,7 @@
     'return' => null,
     'customers' => $customers,
     'salesGroups' => $salesGroups,
-    'products' => $products,
+    'products' => null,
     'branches' => $branches,
     'invoices' => $invoices
     ])

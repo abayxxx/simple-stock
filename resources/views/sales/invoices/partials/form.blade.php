@@ -37,7 +37,7 @@
         <input name="tanggal" type="date" value="{{ old('tanggal', $invoice->tanggal ?? date('Y-m-d')) }}" class="form-control @error('tanggal') is-invalid @enderror" required>
         @error('tanggal') <div class="invalid-feedback">{{ $message }}</div> @enderror
     </div>
-    <div class="col-md-4">
+    <div class="col-md-3">
         <label>Customer</label>
         <select name="company_profile_id" class="form-control @error('company_profile_id') is-invalid @enderror" required>
             <option value="">-- Pilih Customer --</option>
@@ -49,7 +49,16 @@
         </select>
         @error('company_profile_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
     </div>
-    <div class="col-md-3">
+     <div class="col-md-2">
+            <label>Lokasi</label>
+            <select id="add-lokasi_id" class="form-control select-lokasi" name="lokasi_id">
+                <option value="">-- Pilih Lokasi --</option>
+                @foreach($branches as $b)
+                <option value="{{ $b->id }}">{{ $b->name }}</option>
+                @endforeach
+            </select>
+        </div>
+    <div class="col-md-2">
         <label>Sales Group</label>
         <select name="sales_group_id" class="form-control">
             <option value="">-- Pilih Sales Group --</option>

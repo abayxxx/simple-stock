@@ -2,6 +2,16 @@
 $items = old('items', isset($payment) ? $payment->items->toArray() : []);
 @endphp
 
+
+@if ($errors->any())
+<div class="alert alert-danger">
+    <ul>
+        @foreach ($errors->all() as $error)
+        <li>{{ $error }}</li>
+        @endforeach
+    </ul>
+</div>
+@endif
 <div class="row mb-3">
     <div class="col-md-4">
         <label>Kode</label>
@@ -106,10 +116,9 @@ $items = old('items', isset($payment) ? $payment->items->toArray() : []);
             // Load faktur & retur
             $.get("{{ url('admin/purchases/payments/tarik-nota-options') }}?company_profile_id=" + supplierId, function(res) {
                 let rows = '';
-                console.log(res);
                 res.invoices.forEach(inv => {
                     rows += `<tr>
-                    <td><input type="checkbox" class="nota-checkbox" value="${inv.id}" data-tipe-nota="FAKTUR" data-kode="${inv.kode}" data-tanggal="${inv.tanggal}" data-nilai="${inv.grand_total}" data-sisa="${inv.sisa_tagihan}"></td>
+                    <td><input type="checkbox" class="nota-checkbox" value="${inv.id}" data-tipe-nota="FAKTUR" data-kode="${inv.kode}" data-tanggal="${inv.tanggal}" data-nilai="${inv.grand_total}" data-sisa="${inv.sisa_tagihan}" data-total-retur="${inv.total_retur}"></td>
                     <td>FAKTUR</td>
                     <td>${inv.kode}</td>
                     <td>${inv.tanggal}</td>
@@ -136,14 +145,15 @@ $items = old('items', isset($payment) ? $payment->items->toArray() : []);
             $('#table-nota-modal .nota-checkbox:checked').each(function() {
                 let id = $(this).val();
                 let tipeNota = $(this).data('tipe-nota');
-                if (!notaList.find(x => x.id == id && x.tipe == tipe)) {
+                if (!notaList.find(x => x.purchases_invoice_id == id && x.tipe == tipe)) {
                     notaList.push({
-                        id: id,
+                        purchases_invoice_id: id,
                         tipe_nota: tipeNota,
                         kode: $(this).data('kode'),
                         tanggal: $(this).data('tanggal'),
                         nilai_nota: $(this).data('nilai'),
-                        sisa: $(this).data('sisa')
+                        sisa: $(this).data('sisa'),
+                        total_retur: $(this).data('total-retur')
                     });
                 }
             });

@@ -20,10 +20,16 @@ class PurchasesInvoiceController extends Controller
     {
         $awal = $request->periode_awal;
         $akhir = $request->periode_akhir;
-        $query = PurchasesInvoice::with('supplier');
+        $supplierId    = $request->supplier_id;     // from #filter_customer
+
+        $query = PurchasesInvoice::with('supplier')->orderByDesc('id');
 
         if ($awal && $akhir) {
             $query->whereBetween('tanggal', [$awal, $akhir]);
+        }
+
+        if ($supplierId) {
+            $query->where('company_profile_id', $supplierId);
         }
 
         return DataTables::of($query)
@@ -34,8 +40,43 @@ class PurchasesInvoiceController extends Controller
             ->editColumn('total_bayar', fn($r) => number_format($r->total_bayar, 2, ',', '.'))
             ->editColumn('sisa_tagihan', fn($r) => number_format($r->sisa_tagihan, 2, ',', '.'))
             ->editColumn('created_at', fn($r) => $r->created_at->format('d M Y H:i'))
+            ->editColumn('tgl_pembayaran', fn($r) => $r->paymentItems->count() > 0 ? $r->latestPayment()->first()->created_at->format('d M Y H:i') : '-')
             ->addColumn('aksi', function ($r) {
                 return view('purchases.invoices.partials.aksi', ['row' => $r])->render();
+            })
+            ->filterColumn('supplier', function ($query, $keyword) {
+                $query->whereHas('supplier', function ($q) use ($keyword) {
+                    $q->where('name', 'like', "%{$keyword}%");
+                });
+            })
+            ->filterColumn('tanggal', function ($q, $keyword) {
+                // match 'YYYY-MM-DD' or Indonesian formatted text
+                $q->where(function ($qq) use ($keyword) {
+                    $qq->where('tanggal', 'like', "%{$keyword}%")
+                        ->orWhereRaw("DATE_FORMAT(tanggal, '%d %b %Y') like ?", ["%{$keyword}%"]);
+                });
+            })
+            ->filterColumn('created_at', function ($q, $keyword) {
+                $q->whereRaw("DATE_FORMAT(created_at, '%d %b %Y %H:%i') like ?", ["%{$keyword}%"]);
+            })
+            ->filterColumn('tgl_pembayaran', function ($q, $keyword) {
+                $q->whereHas('paymentItems.payment', function ($qq) use ($keyword) {
+                    $qq->whereRaw("DATE_FORMAT(created_at, '%d %b %Y %H:%i') like ?", ["%{$keyword}%"]);
+                });
+                // ^ adjust relation path if needed (e.g. latestPayment relation)
+            })
+            // 🔎 Make formatted numbers searchable
+            ->filterColumn('grand_total', function ($q, $keyword) {
+                $q->whereRaw('CAST(grand_total AS CHAR) like ?', ["%{$keyword}%"]);
+            })
+            ->filterColumn('total_retur', function ($q, $keyword) {
+                $q->whereRaw('CAST(total_retur AS CHAR) like ?', ["%{$keyword}%"]);
+            })
+            ->filterColumn('total_bayar', function ($q, $keyword) {
+                $q->whereRaw('CAST(total_bayar AS CHAR) like ?', ["%{$keyword}%"]);
+            })
+            ->filterColumn('sisa_tagihan', function ($q, $keyword) {
+                $q->whereRaw('CAST(sisa_tagihan AS CHAR) like ?', ["%{$keyword}%"]);
             })
             ->rawColumns(['grand_total', 'total_retur', 'total_bayar', 'sisa_tagihan', 'aksi'])
             ->make(true);
@@ -43,17 +84,15 @@ class PurchasesInvoiceController extends Controller
 
     public function index()
     {
-        $invoices = PurchasesInvoice::with('supplier', 'user')->latest()->paginate(20);
-        return view('purchases.invoices.index', compact('invoices'));
+        return view('purchases.invoices.index');
     }
 
     public function create()
     {
         $suppliers = CompanyProfile::orderBy('name')->get();
-        $products = Product::orderBy('nama')->get();
         $branches = CompanyBranch::orderBy('name')->get();
-
-        return view('purchases.invoices.create', compact('suppliers', 'products', 'branches'));
+        // Load products for dropdown
+        return view('purchases.invoices.create', compact('suppliers', 'branches'));
     }
 
     public function store(Request $request)
@@ -150,10 +189,11 @@ class PurchasesInvoiceController extends Controller
     public function edit(PurchasesInvoice $invoice)
     {
         $suppliers = CompanyProfile::orderBy('name')->get();
-        $products = Product::orderBy('nama')->get();
+        // load only products in purchases invoice
+        $products = Product::whereIn('id', $invoice->items->pluck('product_id'))->orderBy('nama')->get();
         $branches = CompanyBranch::orderBy('name')->get();
         $invoice->load('items');
-        return view('purchases.invoices.edit', compact('invoice', 'suppliers', 'products', 'branches'));
+        return view('purchases.invoices.edit', compact('invoice', 'suppliers', 'branches', 'products'));
     }
 
     public function update(Request $request, PurchasesInvoice $invoice)
@@ -282,8 +322,8 @@ class PurchasesInvoiceController extends Controller
     private function getSisaStokBatch($product_id, $no_seri = null, $tanggal_expired = null)
     {
         $q = Stock::where('product_id', $product_id);
-        if ($no_seri) $q->where('no_seri', $no_seri);
-        if ($tanggal_expired) $q->where('tanggal_expired', $tanggal_expired);
+        // if ($no_seri) $q->where('no_seri', $no_seri);
+        // if ($tanggal_expired) $q->where('tanggal_expired', $tanggal_expired);
 
         $in     = (clone $q)->where('type', 'in')->sum('jumlah');
         $out    = (clone $q)->where('type', 'out')->sum('jumlah');
@@ -298,8 +338,8 @@ class PurchasesInvoiceController extends Controller
     {
         $query = Stock::query()
             ->where('product_id', $product_id);
-        if ($no_seri) $query->where('no_seri', $no_seri);
-        if ($tanggal_expired) $query->where('tanggal_expired', $tanggal_expired);
+        // if ($no_seri) $query->where('no_seri', $no_seri);
+        // if ($tanggal_expired) $query->where('tanggal_expired', $tanggal_expired);
 
         $stocks = $query->orderBy('id')->get();
         $runningSisa = 0;
@@ -320,5 +360,28 @@ class PurchasesInvoiceController extends Controller
     {
         $invoice->load('items.product', 'supplier', 'user');
         return view('purchases.invoices.print', compact('invoice'));
+    }
+
+    public function filterOptions(Request $request)
+    {
+        $awal  = $request->awal;
+        $akhir = $request->akhir;
+
+        $base = PurchasesInvoice::query();
+        if ($awal  && $akhir) {
+            $base->whereBetween('tanggal', [$awal, $akhir]);
+        }
+
+        // Distinct keys from invoices in range
+        $supplierIds   = (clone $base)->whereNotNull('company_profile_id')->distinct()->pluck('company_profile_id');
+
+
+        // Fetch display names
+        $suppliers   = CompanyProfile::whereIn('id', $supplierIds)->orderBy('name')->get(['id', 'name']);
+
+
+        return response()->json([
+            'suppliers'    => $suppliers,
+        ]);
     }
 }

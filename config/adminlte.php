@@ -316,6 +316,7 @@ return [
         [
             'text' => 'data_master',
             'icon' => 'fas fa-fw fa-database',
+            'can' => ['isSuperAdmin', 'isAdmin'],
             'submenu' => [
 
                 [
@@ -354,18 +355,21 @@ return [
         [
             'text' => 'money_management',
             'icon' => 'fas fa-fw fa-money-bill-wave',
+            'can' => ['isSuperAdmin', 'isAdmin'],
             'submenu' => [
                 [
                     'text' => 'Daftar Piutang',
-                    'url' => 'admin/daftar-piutang',
+                    'url' => 'admin/finances/receivables',
                     'icon' => 'fas fa-fw fa-file-invoice-dollar',
                     'label_color' => 'success',
+                    'can' => ['isSuperAdmin', 'isAdmin'],
                 ],
                 [
                     'text' => 'Daftar Hutang',
-                    'url' => 'admin/daftar-hutang',
+                    'url' => 'admin/finances/debt',
                     'icon' => 'fas fa-fw fa-file-invoice-dollar',
                     'label_color' => 'success',
+                    'can' => ['isSuperAdmin', 'isAdmin'],
                 ],
 
             ]
@@ -379,90 +383,105 @@ return [
                     'url' => 'admin/stocks/lists',
                     'icon' => 'fas fa-fw fa-boxes',
                     'label_color' => 'success',
+                    'can' => ['isSuperAdmin', 'isAdmin', 'isSales'],
                 ],
                 [
                     'text' => 'Kartu Stok',
                     'url' => 'admin/stocks/cards',
                     'icon' => 'fas fa-fw fa-boxes',
                     'label_color' => 'success',
+                    'can' => ['isSuperAdmin', 'isAdmin', 'isSales'],
                 ],
                 [
                     'text' => 'Stok Masuk',
                     'url' => 'admin/stocks/in',
                     'icon' => 'fas fa-fw fa-arrow-down',
                     'label_color' => 'success',
+                    'can' => ['isSuperAdmin', 'isAdmin'],
                 ],
                 [
                     'text' => 'Stok Keluar',
                     'url' => 'admin/stocks/out',
                     'icon' => 'fas fa-fw fa-arrow-up',
                     'label_color' => 'success',
+                    'can' => ['isSuperAdmin', 'isAdmin'],
                 ],
                 [
                     'text' => 'Stok Pemusnahan',
                     'url' => 'admin/stocks/delete',
                     'icon' => 'fas fa-fw fa-trash',
                     'label_color' => 'success',
+                    'can' => ['isSuperAdmin', 'isAdmin'],
                 ],
             ],
         ],
         [
             'text' => 'sales',
             'icon' => 'fas fa-fw fa-shopping-cart',
+            'can' => ['isSuperAdmin', 'isAdmin'],
             'submenu' => [
                 [
                     'text' => 'Faktur Penjualan',
                     'url' => 'admin/sales/invoices',
                     'icon' => 'fas fa-fw fa-file-invoice',
                     'label_color' => 'success',
+                    'can' => ['isSuperAdmin', 'isAdmin'],
                 ],
                 [
                     'text' => 'Retur Penjualan',
                     'url' => 'admin/sales/returns',
                     'icon' => 'fas fa-fw fa-undo',
                     'label_color' => 'success',
+                    'can' => ['isSuperAdmin', 'isAdmin'],
                 ],
                 [
                     'text' => 'Tanda Terima Penjualan',
                     'url' => 'admin/sales/receipts',
                     'icon' => 'fas fa-fw fa-receipt',
                     'label_color' => 'success',
+                    'can' => ['isSuperAdmin', 'isAdmin'],
                 ],
                 [
                     'text' => 'Pembayaran Penjualan',
                     'url' => 'admin/sales/payments',
                     'icon' => 'fas fa-fw fa-credit-card',
                     'label_color' => 'success',
+                    'can' => ['isSuperAdmin', 'isAdmin'],
                 ],
                 [
                     'text' => 'Faktur Penjualan Detail',
                     'url' => 'admin/sales/detail',
                     'icon' => 'fas fa-fw fa-file-invoice',
                     'label_color' => 'success',
+                    'can' => ['isSuperAdmin', 'isAdmin'],
                 ],
                 [
                     'text' => 'Faktur Penjualan Belum Lunas',
                     'url' => 'admin/sales/unpaid',
                     'icon' => 'fas fa-fw fa-file-invoice',
-                    'label_color' => 'success'
+                    'label_color' => 'success',
+                    'can' => ['isSuperAdmin', 'isAdmin'],
                 ]
             ],
         ],
         [
             'text' => 'purchases',
             'icon' => 'fas fa-fw fa-shopping-basket',
+            'can' => ['isSuperAdmin', 'isAdmin'],
             'submenu' => [
                 [
                     'text' => 'Faktur Pembelian',
                     'url' => 'admin/purchases/invoices',
                     'icon' => 'fas fa-fw fa-file-invoice',
                     'label_color' => 'success',
+                    'can' => ['isSuperAdmin', 'isAdmin'],
                 ],
                 [
                     'text' => 'Retur Pembelian',
                     'url' => 'admin/purchases/returns',
                     'icon' => 'fas fa-fw fa-undo',
                     'label_color' => 'success',
+                    'can' => ['isSuperAdmin', 'isAdmin'],
                 ],
 
                 [
@@ -470,6 +489,7 @@ return [
                     'url' => 'admin/purchases/payments',
                     'icon' => 'fas fa-fw fa-credit-card',
                     'label_color' => 'success',
+                    'can' => ['isSuperAdmin', 'isAdmin'],
                 ],
             ],
         ],

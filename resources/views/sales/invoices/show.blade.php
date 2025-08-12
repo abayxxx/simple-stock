@@ -18,6 +18,7 @@
                 <b>Term:</b> {{ $invoice->term }}<br>
             </div>
             <div class="col-md-4">
+                <b>Lokasi:</b> {{ $invoice->location->name ?? '-' }}<br>
                 <b>Status:</b> {{ $invoice->is_tunai ? 'Tunai' : 'Kredit' }}<br>
                 <b>No PO:</b> {{ $invoice->no_po }}<br>
                 <b>Jatuh Tempo:</b> {{ $invoice->jatuh_tempo ? tanggal_indo($invoice->jatuh_tempo) : '-' }}<br>
@@ -37,7 +38,6 @@
                 <thead class="table-light">
                     <tr>
                         <th>Produk</th>
-                        <th>Lokasi</th>
                         <th>No Seri</th>
                         <th>Expired</th>
                         <th>Qty</th>
@@ -57,7 +57,6 @@
                     @foreach($invoice->items as $item)
                     <tr>
                         <td>{{ $item->product->nama ?? '-' }}</td>
-                        <td>{{ $item->lokasi->name ?? '-' }}</td>
                         <td>{{ $item->no_seri }}</td>
                         <td>{{ $item->tanggal_expired }}</td>
                         <td class="text-end">{{ $item->qty }}</td>

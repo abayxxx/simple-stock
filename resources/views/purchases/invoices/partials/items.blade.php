@@ -140,7 +140,7 @@ $existingItems = old('items', isset($invoice) ? $invoice->items->toArray() : [])
 
         // Untuk edit: render existing items ke tabel dan hidden input
         let existingItems = @json($existingItems);
-        let products = @json($products->keyBy('id'));
+        let products = @json(collect($products)->keyBy('id'));
 
         function renderReviewRow(item, idx) {
             let produk = products[item.product_id] ? (products[item.product_id].kode + ' - ' + products[item.product_id].nama) : '';

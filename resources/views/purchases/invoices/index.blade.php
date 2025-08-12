@@ -14,11 +14,22 @@
     <a href="{{ route('purchases.invoices.create') }}" class="btn btn-primary"><i class="fa fa-plus"></i> Tambah Tanda Terima</a>
 </div>
 <div class="card shadow">
-    <div class="card-header d-flex align-items-center justify-content-between">
-        <div>
-            <input type="date" id="periode_awal" class="form-control d-inline-block" style="width:140px">
-            s/d
-            <input type="date" id="periode_akhir" class="form-control d-inline-block" style="width:140px">
+    <div class="card-header">
+        <div class="row g-2 align-items-center">
+
+            <!-- Date range -->
+            <div class="col-12 col-md-auto d-flex align-items-center gap-2">
+                <input type="date" id="periode_awal" class="form-control" style="min-width:140px">
+                <span class="text-nowrap">s/d</span>
+                <input type="date" id="periode_akhir" class="form-control" style="min-width:140px">
+            </div>
+
+            <!-- Supplier -->
+            <div class="col-12 col-sm-6 col-md-auto">
+                <select id="filter_supplier" class="form-select w-100 form-control">
+                    <option value="">Semua Supplier</option>
+                </select>
+            </div>
         </div>
     </div>
     <div class="card-body p-2 table-responsive">
@@ -33,6 +44,7 @@
                     <th>PEMBAYARAN</th>
                     <th>SISA</th>
                     <th>TGL. INPUT</th>
+                    <th>TGL. PEMBAYARAN</th>
                     <th>AKSI</th>
                 </tr>
             </thead>
@@ -45,7 +57,7 @@
                     <th id="footer-sisa" class="text-end"></th>
                     <th></th>
                     <th></th>
-
+                    <th></th>
                 </tr>
             </tfoot>
         </table>
@@ -67,6 +79,7 @@
                 data: function(d) {
                     d.periode_awal = $('#periode_awal').val();
                     d.periode_akhir = $('#periode_akhir').val();
+                    d.supplier_id = $('#filter_supplier').val();
                 }
             },
             paging: true,
@@ -120,6 +133,11 @@
                     data: 'created_at',
                     className: 'text-center align-middle',
                     width: '8%'
+                },
+                {
+                    data: 'tgl_pembayaran',
+                    className: 'text-center align-middle',
+                    width: '10%'
                 },
                 {
                     data: 'aksi',
@@ -189,9 +207,39 @@
 
         // Filter date on change
         $('#periode_awal, #periode_akhir').on('change', function() {
+            loadFilterOptions();
             table.ajax.reload();
 
         });
+
+        function loadFilterOptions() {
+            const awal = $('#periode_awal').val();
+            const akhir = $('#periode_akhir').val();
+            // if (!awal || !akhir) {
+            //     // Optional: clear dropdowns if date range incomplete
+            //     return;
+            // }
+
+            $.get("{{ route('purchases.invoices.filter-options') }}", {
+                awal,
+                akhir
+            }, function(res) {
+                // res: { suppliers: [{id,name}] }
+                const $sup = $('#filter_supplier').empty().append('<option value="">Semua Supplier</option>');
+                res.suppliers.forEach(o => $sup.append(`<option value="${o.id}">${o.name}</option>`));
+
+                // after refresh options, reload table with new filters
+                table.ajax.reload();
+            });
+        }
+
+        // reload table when any dropdown changes
+        $('#filter_supplier').on('change', function() {
+            table.ajax.reload();
+        });
+
+        // optional: first load (if you want them empty until dates picked, you can skip this)
+        loadFilterOptions();
     });
 </script>
 @endpush

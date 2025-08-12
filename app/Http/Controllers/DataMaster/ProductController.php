@@ -53,7 +53,7 @@ class ProductController extends Controller
 
     public function edit(Product $product)
     {
-        
+
         $satuanList = $product->getSatuanList();
         $satuanMassaList = $product->getSatuanMassaList();
         return view('data_master.products.edit', compact('product', 'satuanList', 'satuanMassaList'));
@@ -77,42 +77,50 @@ class ProductController extends Controller
 
     private function validateProduct(Request $request, $id = null)
     {
-        return $request->validate([
-            'nama' => 'required|string|max:255',
-            'merk' => 'nullable|string|max:100',
-            'satuan_kecil' => 'required|string|max:100',
-            'isi_satuan_kecil' => 'required|integer|min:1',
-            'satuan_sedang' => 'nullable|string|max:100',
-            'isi_satuan_sedang' => 'nullable|integer|min:1',
-            'satuan_besar' => 'nullable|string|max:100',
-            'isi_satuan_besar' => 'nullable|integer|min:1',
-            'satuan_massa' => 'nullable|string|max:100',
-            'isi_satuan_massa' => 'nullable|integer|min:1',
-            'catatan' => 'nullable|string|max:500',
-            'hpp_bruto_kecil' => 'nullable|numeric',
-            'hpp_bruto_besar' => 'nullable|numeric',
-            'diskon_hpp_1' => 'nullable|numeric',
-            'diskon_hpp_2' => 'nullable|numeric',
-            'diskon_hpp_3' => 'nullable|numeric',
-            'diskon_hpp_4' => 'nullable|numeric',
-            'diskon_hpp_5' => 'nullable|numeric',
-            'harga_umum' => 'nullable|numeric',
-            'diskon_harga_1' => 'nullable|numeric',
-            'diskon_harga_2' => 'nullable|numeric',
-            'diskon_harga_3' => 'nullable|numeric',
-            'diskon_harga_4' => 'nullable|numeric',
-            'diskon_harga_5' => 'nullable|numeric',
-        ]);
+
+        try {
+            $data = $request->validate([
+                'nama' => 'required|string|max:255',
+                'merk' => 'nullable|string|max:100',
+                'satuan_kecil' => 'required|string|max:100',
+                'isi_satuan_kecil' => 'required|integer|min:1',
+                'satuan_sedang' => 'nullable|string|max:100',
+                'isi_satuan_sedang' => 'nullable|integer|min:1',
+                'satuan_besar' => 'nullable|string|max:100',
+                'isi_satuan_besar' => 'nullable|integer|min:1',
+                'satuan_massa' => 'nullable|string|max:100',
+                'isi_satuan_massa' => 'nullable|integer|min:1',
+                'catatan' => 'nullable|string|max:500',
+                'hpp_bruto_kecil' => 'nullable|numeric',
+                'hpp_bruto_besar' => 'nullable|numeric',
+                'diskon_hpp_1' => 'nullable|numeric',
+                'diskon_hpp_2' => 'nullable|numeric',
+                'diskon_hpp_3' => 'nullable|numeric',
+                'diskon_hpp_4' => 'nullable|numeric',
+                'diskon_hpp_5' => 'nullable|numeric',
+                'harga_umum' => 'nullable|numeric',
+                'diskon_harga_1' => 'nullable|numeric',
+                'diskon_harga_2' => 'nullable|numeric',
+                'diskon_harga_3' => 'nullable|numeric',
+                'diskon_harga_4' => 'nullable|numeric',
+                'diskon_harga_5' => 'nullable|numeric',
+            ]);
+        } catch (\Throwable $th) {
+            //throw $th;
+            return redirect()->back()->withErrors($th->getMessage())->withInput();
+        }
+
+        return $data;
     }
 
     public function search(Request $request)
     {
         $q = $request->get('q', '');
         $products = Product::where('kode', 'like', "%$q%")
-                    ->orWhere('nama', 'like', "%$q%")
-                    ->orderBy('kode')
-                    ->limit(20)
-                    ->get(['id', 'kode', 'nama', 'satuan_kecil']);
+            ->orWhere('nama', 'like', "%$q%")
+            ->orderBy('kode')
+            ->limit(20)
+            ->get(['id', 'kode', 'nama', 'satuan_kecil']);
         return response()->json($products);
     }
 }

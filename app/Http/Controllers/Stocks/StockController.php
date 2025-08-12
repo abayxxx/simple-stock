@@ -34,7 +34,7 @@ class StockController extends Controller
 
     public function datatable($type)
     {
-        $stocks = Stock::with('product')->where('type', $type);
+        $stocks = Stock::with('product')->where('type', $type)->orderByDesc('id');
         return DataTables::of($stocks)
             ->editColumn('tanggal', fn($row) => $row->created_at->format('d M Y'))
             ->addColumn('status', fn($row) => 'Aktif')
@@ -73,6 +73,7 @@ class StockController extends Controller
         DB::transaction(function () use ($data, &$stock) {
             $stock = Stock::create($data);
             $stock->sisa_stok = $this->calculateSisaStok($stock->product_id);
+            $stock->catatan = $data['catatan'] ?? 'Penambahan stok ' . $stock->product->nama . ' pada tanggal ' . now()->format('Y-m-d H:i:s');
             $stock->save();
         });
         return redirect()->route("stock.$type")->with('success', 'Transaksi stok berhasil ditambahkan.');
@@ -104,6 +105,7 @@ class StockController extends Controller
 
         $stock->update($data);
         $stock->sisa_stok = $this->calculateSisaStok($stock->product_id);
+        $stock->catatan = $data['catatan'] ?? 'Update stok ' . $stock->product->nama . ' pada tanggal ' . now()->format('Y-m-d H:i:s');
         $stock->save();
         return redirect()->route("stock.$type")->with('success', 'Transaksi stok berhasil diupdate.');
     }

@@ -37,5 +37,15 @@ class AuthServiceProvider extends ServiceProvider
         return isSuperAdmin();
         });
 
+        Gate::define('isAdmin', function ($user) {
+            // Or use your custom logic here
+            return isAdmin();
+        });
+
+        Gate::define('isSales', function ($user) {
+            // Or use your custom logic here
+            return isSales();
+        });
+
     }
 }

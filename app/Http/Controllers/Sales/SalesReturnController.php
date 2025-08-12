@@ -21,10 +21,20 @@ class SalesReturnController extends Controller
     {
         $awal  = $request->periode_awal;
         $akhir = $request->periode_akhir;
-        $query = SalesReturn::with('customer', 'salesGroup');
+        $salesGroupId = $request->sales_group_id;
+        $customerId = $request->customer_id;
+        $query = SalesReturn::with('customer', 'salesGroup')->orderByDesc('id');
 
         if ($awal && $akhir) {
             $query->whereBetween('tanggal', [$awal, $akhir]);
+        }
+
+        if ($salesGroupId) {
+            $query->where('sales_group_id', $salesGroupId);
+        }
+
+        if ($customerId) {
+            $query->where('company_profile_id', $customerId);
         }
 
         return DataTables::of($query)
@@ -39,27 +49,49 @@ class SalesReturnController extends Controller
             ->addColumn('aksi', function ($r) {
                 return view('sales.returns.partials.aksi', ['row' => $r])->render();
             })
+            ->filterColumn('customer', function ($query, $keyword) {
+                $query->whereHas('customer', function ($q) use ($keyword) {
+                    $q->where('name', 'like', "%{$keyword}%");
+                });
+            })
+            ->filterColumn('sales_group', function ($query, $keyword) {
+                $query->whereHas('salesGroup', function ($q) use ($keyword) {
+                    $q->where('nama', 'like', "%{$keyword}%");
+                });
+            })
+            ->filterColumn('tanggal', function ($query, $keyword) {
+                $query->whereDate('tanggal', 'like', "%{$keyword}%");
+            })
+            ->filterColumn('grand_total', function ($query, $keyword) {
+                $query->whereRaw("FORMAT(grand_total, 2) LIKE ?", ["%{$keyword}%"]);
+            })
+            ->filterColumn('total_retur', function ($query, $keyword) {
+                $query->whereRaw("FORMAT(total_retur, 2) LIKE ?", ["%{$keyword}%"]);
+            })
+            ->filterColumn('total_bayar', function ($query, $keyword) {
+                $query->whereRaw("FORMAT(total_bayar, 2) LIKE ?", ["%{$keyword}%"]);
+            })
+            ->filterColumn('sisa_tagihan', function ($query, $keyword) {
+                $query->whereRaw("FORMAT(sisa_tagihan, 2) LIKE ?", ["%{$keyword}%"]);
+            })
             ->rawColumns(['grand_total', 'total_retur', 'total_bayar', 'sisa_tagihan', 'aksi'])
             ->make(true);
     }
 
     public function index()
     {
-        $returns = SalesReturn::with('customer', 'salesGroup', 'user')->latest()->paginate(20);
-        return view('sales.returns.index', compact('returns'));
+        return view('sales.returns.index');
     }
 
     public function create()
     {
         $customers = CompanyProfile::orderBy('name')->get();
         $salesGroups = SalesGroup::orderBy('nama')->get();
-        $products = Product::with('stocks')->whereHas('stocks', function ($q) {
-            $q->where('type', 'in');
-        })->orderBy('nama')->get();
+       
         $branches = CompanyBranch::orderBy('name')->get();
         $invoices = SalesInvoice::orderBy('tanggal', 'desc')->get();
 
-        return view('sales.returns.create', compact('customers', 'salesGroups', 'products', 'branches', 'invoices'));
+        return view('sales.returns.create', compact('customers', 'salesGroups', 'branches', 'invoices'));
     }
 
     public function store(Request $request)
@@ -134,10 +166,12 @@ class SalesReturnController extends Controller
         if ($data['sales_invoice_id']) {
             $invoice = SalesInvoice::find($data['sales_invoice_id']);
             if ($invoice) {
-                $totalRetur = $retur->grand_total;
-                $invoice->total_retur += $totalRetur;
-                $invoice->sisa_tagihan = max(0, $invoice->grand_total  - $totalRetur);
-                $invoice->save();
+                if (!isSalesInvoiceLocked($invoice->id)) {
+                    $totalRetur = $retur->grand_total;
+                    $invoice->total_retur += $totalRetur;
+                    $invoice->sisa_tagihan = max(0, $invoice->grand_total  - $totalRetur);
+                    $invoice->save();
+                }
             }
         }
 
@@ -154,9 +188,8 @@ class SalesReturnController extends Controller
     {
         $customers = CompanyProfile::orderBy('name')->get();
         $salesGroups = SalesGroup::orderBy('nama')->get();
-        $products = Product::with('stocks')->whereHas('stocks', function ($q) {
-            $q->where('type', 'in');
-        })->orderBy('nama')->get();
+        // load only products in purchases invoice
+        $products = Product::whereIn('id', $return->items->pluck('product_id'))->orderBy('nama')->get();
         $branches = CompanyBranch::orderBy('name')->get();
         $invoices = SalesInvoice::orderBy('tanggal', 'desc')->get();
         $return->load('items');
@@ -245,10 +278,13 @@ class SalesReturnController extends Controller
         if ($return->sales_invoice_id) {
             $invoice = SalesInvoice::find($return->sales_invoice_id);
             if ($invoice) {
-                $totalRetur = $return->grand_total;
-                $invoice->total_retur = $totalRetur;
-                $invoice->sisa_tagihan = max(0, $invoice->grand_total - $totalRetur);
-                $invoice->save();
+                // If invoice is locked, we cannot update it
+                if (!isSalesInvoiceLocked($invoice->id)) {
+                    $totalRetur = $return->grand_total;
+                    $invoice->total_retur = $totalRetur;
+                    $invoice->sisa_tagihan = max(0, $invoice->grand_total - $totalRetur);
+                    $invoice->save();
+                }
             }
         }
 
@@ -275,9 +311,11 @@ class SalesReturnController extends Controller
         if ($return->sales_invoice_id) {
             $invoice = SalesInvoice::find($return->sales_invoice_id);
             if ($invoice) {
-                $invoice->total_retur -= $return->grand_total;
-                $invoice->sisa_tagihan = max(0, $invoice->sisa_tagihan + $return->grand_total);
-                $invoice->save();
+                if (!isSalesInvoiceLocked($invoice->id)) {
+                    $invoice->total_retur -= $return->grand_total;
+                    $invoice->sisa_tagihan = max(0, $invoice->sisa_tagihan + $return->grand_total);
+                    $invoice->save();
+                }
             }
         }
 
@@ -299,8 +337,8 @@ class SalesReturnController extends Controller
     private function getSisaStokBatch($product_id, $no_seri = null, $tanggal_expired = null)
     {
         $q = Stock::where('product_id', $product_id);
-        if ($no_seri) $q->where('no_seri', $no_seri);
-        if ($tanggal_expired) $q->where('tanggal_expired', $tanggal_expired);
+        // if ($no_seri) $q->where('no_seri', $no_seri);
+        // if ($tanggal_expired) $q->where('tanggal_expired', $tanggal_expired);
 
         $in     = (clone $q)->where('type', 'in')->sum('jumlah');
         $out    = (clone $q)->where('type', 'out')->sum('jumlah');
@@ -315,8 +353,8 @@ class SalesReturnController extends Controller
     {
         $query = Stock::query()
             ->where('product_id', $product_id);
-        if ($no_seri) $query->where('no_seri', $no_seri);
-        if ($tanggal_expired) $query->where('tanggal_expired', $tanggal_expired);
+        // if ($no_seri) $query->where('no_seri', $no_seri);
+        // if ($tanggal_expired) $query->where('tanggal_expired', $tanggal_expired);
 
         $stocks = $query->orderBy('id')->get();
         $runningSisa = 0;
@@ -331,9 +369,9 @@ class SalesReturnController extends Controller
     }
 
     // In SalesReturnController
-    public function getInvoiceProductsOptions(Request $request,$invoiceId)
+    public function getInvoiceProductsOptions(Request $request, $invoiceId)
     {
-       $q = $request->get('q', '');
+        $q = $request->get('q', '');
 
         $invoice = SalesInvoice::with('items.product')->findOrFail($invoiceId);
 
@@ -342,7 +380,7 @@ class SalesReturnController extends Controller
 
         // If there is a search, filter; otherwise, take first 10
         $filteredProducts = $q
-            ? $allProducts->filter(function($p) use ($q) {
+            ? $allProducts->filter(function ($p) use ($q) {
                 return str_contains(strtolower($p->kode), strtolower($q))
                     || str_contains(strtolower($p->nama), strtolower($q));
             })
@@ -415,5 +453,30 @@ class SalesReturnController extends Controller
     {
         $invoice = SalesReturn::with(['customer', 'items.product', 'salesGroup'])->findOrFail($id);
         return view('sales.returns.print', compact('invoice'));
+    }
+
+    public function filterOptions(Request $request)
+    {
+        $awal  = $request->awal;
+        $akhir = $request->akhir;
+
+        $base = SalesReturn::query();
+        if ($awal && $akhir) {
+            $base->whereBetween('tanggal', [$awal, $akhir]);
+        }
+
+        // Distinct keys from invoices in range
+        $customerIds   = (clone $base)->whereNotNull('company_profile_id')->distinct()->pluck('company_profile_id');
+        $salesGroupIds = (clone $base)->whereNotNull('sales_group_id')->distinct()->pluck('sales_group_id');
+
+        // Fetch display names
+        $customers   = CompanyProfile::whereIn('id', $customerIds)->orderBy('name')->get(['id', 'name']);
+        $salesGroups = SalesGroup::whereIn('id', $salesGroupIds)->orderBy('nama')->get(['id', 'nama']);
+
+
+        return response()->json([
+            'customers'    => $customers,
+            'sales_groups' => $salesGroups,
+        ]);
     }
 }

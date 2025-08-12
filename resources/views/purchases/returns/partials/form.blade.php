@@ -1,3 +1,12 @@
+@if ($errors->any())
+<div class="alert alert-danger">
+    <ul>
+        @foreach ($errors->all() as $error)
+        <li>{{ $error }}</li>
+        @endforeach
+    </ul>
+</div>
+@endif
 <div class="row mb-3">
     <div class="col-md-3 mb-3">
         <label>No Faktur</label>
@@ -147,49 +156,49 @@
     }
     toggleKodeFaktur();
     $('#auto_kode').on('change', toggleKodeFaktur);
-    
-function updateSummary() {
-    let subtotal = 0;
-    let totalDiskonItem = 0;
-    let subtotalSebelumPPN = 0;
-    let totalPPN = 0;
-    let grandTotal = 0;
 
-    // Loop setiap row pada table review-items-table
-    $('#review-items-table tbody tr').each(function() {
-        let idx = $(this).data('index');
-        let prefix = `items[${idx}]`;
+    function updateSummary() {
+        let subtotal = 0;
+        let totalDiskonItem = 0;
+        let subtotalSebelumPPN = 0;
+        let totalPPN = 0;
+        let grandTotal = 0;
 
-        let subTotalSblmDisc = parseFloat($(`[name="${prefix}[sub_total_sblm_disc]"]`).val()) || 0;
-        let totalDiskon = parseFloat($(`[name="${prefix}[total_diskon_item]"]`).val()) || 0;
-        let subTotalSblmPPN = parseFloat($(`[name="${prefix}[sub_total_sebelum_ppn]"]`).val()) || 0;
-        let subTotalStlhDisc = parseFloat($(`[name="${prefix}[sub_total_setelah_disc]"]`).val()) || 0;
+        // Loop setiap row pada table review-items-table
+        $('#review-items-table tbody tr').each(function() {
+            let idx = $(this).data('index');
+            let prefix = `items[${idx}]`;
 
-        subtotal += subTotalSblmDisc;
-        totalDiskonItem += totalDiskon;
-        subtotalSebelumPPN += subTotalSblmPPN;
-        grandTotal += subTotalStlhDisc;
+            let subTotalSblmDisc = parseFloat($(`[name="${prefix}[sub_total_sblm_disc]"]`).val()) || 0;
+            let totalDiskon = parseFloat($(`[name="${prefix}[total_diskon_item]"]`).val()) || 0;
+            let subTotalSblmPPN = parseFloat($(`[name="${prefix}[sub_total_sebelum_ppn]"]`).val()) || 0;
+            let subTotalStlhDisc = parseFloat($(`[name="${prefix}[sub_total_setelah_disc]"]`).val()) || 0;
 
-        let ppnPerItem = subTotalStlhDisc - subTotalSblmPPN;
-        totalPPN += ppnPerItem;
-    });
+            subtotal += subTotalSblmDisc;
+            totalDiskonItem += totalDiskon;
+            subtotalSebelumPPN += subTotalSblmPPN;
+            grandTotal += subTotalStlhDisc;
 
-    // Diskon faktur & tambahan PPN (jika ada)
-    let diskonFaktur = parseFloat($('[name="diskon_faktur"]').val()) || 0;
-    let diskonPPN = parseFloat($('[name="diskon_ppn"]').val()) || 0;
+            let ppnPerItem = subTotalStlhDisc - subTotalSblmPPN;
+            totalPPN += ppnPerItem;
+        });
 
-    // Hitung grand total setelah diskon faktur dan ppn
-    let grandTotalWithDiskon = grandTotal - (grandTotal * (diskonFaktur / 100)) + (grandTotal * (diskonPPN / 100));
-    let sisaTagihan = grandTotalWithDiskon;
+        // Diskon faktur & tambahan PPN (jika ada)
+        let diskonFaktur = parseFloat($('[name="diskon_faktur"]').val()) || 0;
+        let diskonPPN = parseFloat($('[name="diskon_ppn"]').val()) || 0;
 
-    // Set value ke summary fields
-    $('[name="subtotal"]').val(subtotal.toFixed(2));
-    $('[name="diskon_item"]').val(totalDiskonItem.toFixed(2));
-    $('[name="subtotal_sebelum_ppn"]').val(subtotalSebelumPPN.toFixed(2));
-    $('[name="grand_total"]').val(grandTotalWithDiskon.toFixed(2));
-    $('[name="total_bayar"]').val(0);
-    $('[name="sisa_tagihan"]').val(sisaTagihan.toFixed(2));
-}
+        // Hitung grand total setelah diskon faktur dan ppn
+        let grandTotalWithDiskon = grandTotal - (grandTotal * (diskonFaktur / 100)) + (grandTotal * (diskonPPN / 100));
+        let sisaTagihan = grandTotalWithDiskon;
+
+        // Set value ke summary fields
+        $('[name="subtotal"]').val(subtotal.toFixed(2));
+        $('[name="diskon_item"]').val(totalDiskonItem.toFixed(2));
+        $('[name="subtotal_sebelum_ppn"]').val(subtotalSebelumPPN.toFixed(2));
+        $('[name="grand_total"]').val(grandTotalWithDiskon.toFixed(2));
+        $('[name="total_bayar"]').val(0);
+        $('[name="sisa_tagihan"]').val(sisaTagihan.toFixed(2));
+    }
 
 
     // Trigger summary update setiap ada perubahan di item atau summary field

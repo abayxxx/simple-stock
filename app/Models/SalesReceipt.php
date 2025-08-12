@@ -16,6 +16,7 @@ class SalesReceipt extends Model
         'total_retur',
         'user_id',
         'keterangan',
+        'is_locked',
         'kembali_tagih_tanggal'
     ];
 

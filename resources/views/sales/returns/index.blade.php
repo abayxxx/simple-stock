@@ -9,11 +9,30 @@
     <a href="{{ route('sales.returns.create') }}" class="btn btn-primary"><i class="fa fa-plus"></i> Tambah Retur Penjualan</a>
 </div>
 <div class="card">
-    <div class="card-header d-flex align-items-center">
-        <div>
-            <input type="date" id="periode_awal" class="form-control d-inline-block" style="width:140px">
-            s/d
-            <input type="date" id="periode_akhir" class="form-control d-inline-block" style="width:140px">
+    <div class="card-header">
+        <div class="row g-2 align-items-center">
+
+            <!-- Date range -->
+            <div class="col-12 col-md-auto d-flex align-items-center gap-2">
+                <input type="date" id="periode_awal" class="form-control" style="min-width:140px">
+                <span class="text-nowrap">s/d</span>
+                <input type="date" id="periode_akhir" class="form-control" style="min-width:140px">
+            </div>
+
+            <!-- Customer -->
+            <div class="col-12 col-sm-6 col-md-auto">
+                <select id="filter_customer" class="form-select w-100 form-control">
+                    <option value="">Semua Customer</option>
+                </select>
+            </div>
+
+            <!-- Sales Group -->
+            <div class="col-12 col-sm-6 col-md-auto">
+                <select id="filter_sg" class="form-select w-100 form-control">
+                    <option value="">Semua Sales Group</option>
+                </select>
+            </div>
+
         </div>
     </div>
     <div class="card-body p-2 table-responsive">
@@ -48,6 +67,8 @@
                 data: function(d) {
                     d.periode_awal = $('#periode_awal').val();
                     d.periode_akhir = $('#periode_akhir').val();
+                    d.customer_id = $('#filter_customer').val();
+                    d.sales_group_id = $('#filter_sg').val();
                 }
             },
             columns: [{
@@ -91,9 +112,42 @@
 
         // Filter date on change
         $('#periode_awal, #periode_akhir').on('change', function() {
-            console.log('Filter date changed');
+            loadFilterOptions();
             $('#table-retur').DataTable().ajax.reload();
         });
+
+        function loadFilterOptions() {
+            const awal = $('#periode_awal').val();
+            const akhir = $('#periode_akhir').val();
+            // if (!awal || !akhir) {
+            //     // Optional: clear dropdowns if date range incomplete
+            //     return;
+            // }
+
+            $.get("{{ route('sales.returns.filter-options') }}", {
+                awal,
+                akhir
+            }, function(res) {
+                // res: { customers: [{id,name}], locations: [{id,name}], sales_groups: [{id,nama}] }
+                const $sup = $('#filter_customer').empty().append('<option value="">Semua Customer</option>');
+                res.customers.forEach(o => $sup.append(`<option value="${o.id}">${o.name}</option>`));
+
+                const $sg = $('#filter_sg').empty().append('<option value="">Semua Sales Group</option>');
+                res.sales_groups.forEach(o => $sg.append(`<option value="${o.id}">${o.nama}</option>`));
+
+                // after refresh options, reload table with new filters
+                $('#table-retur').DataTable().ajax.reload();
+            });
+        }
+
+
+        // reload table when any dropdown changes
+        $('#filter_customer, #filter_sg').on('change', function() {
+            $('#table-retur').DataTable().ajax.reload();
+        });
+
+        // optional: first load (if you want them empty until dates picked, you can skip this)
+        loadFilterOptions();
     });
 </script>
 @endpush

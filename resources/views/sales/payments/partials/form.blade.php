@@ -2,6 +2,16 @@
 $items = old('items', isset($payment) ? $payment->items->toArray() : []);
 @endphp
 
+@if ($errors->any())
+<div class="alert alert-danger">
+    <ul>
+        @foreach ($errors->all() as $error)
+        <li>{{ $error }}</li>
+        @endforeach
+    </ul>
+</div>
+@endif
+
 <div class="row mb-3">
     <div class="col-md-4">
         <label>Kode</label>
@@ -70,9 +80,7 @@ $items = old('items', isset($payment) ? $payment->items->toArray() : []);
             // Load faktur & retur
             $.get("{{ url('admin/sales/payments/tarik-nota-options') }}?company_profile_id=" + customerId, function(res) {
                 let rows = '';
-                console.log(res);
                 res.invoices.forEach(inv => {
-                    console.log(inv.total_retur);
                     rows += `<tr>
                     <td><input type="checkbox" class="nota-checkbox" value="${inv.id}" data-tipe-nota="FAKTUR" data-kode="${inv.kode}" data-tanggal="${inv.tanggal}" data-nilai="${inv.grand_total}" data-sisa="${inv.sisa_tagihan}" data-total-retur="${inv.total_retur}"></td>
                     <td>FAKTUR</td>
@@ -101,9 +109,9 @@ $items = old('items', isset($payment) ? $payment->items->toArray() : []);
             $('#table-nota-modal .nota-checkbox:checked').each(function() {
                 let id = $(this).val();
                 let tipeNota = $(this).data('tipe-nota');
-                if (!notaList.find(x => x.id == id && x.tipe_nota == tipeNota)) {
+                if (!notaList.find(x => x.sales_invoice_id == id && x.tipe_nota == tipeNota)) {
                     notaList.push({
-                        id: id,
+                        sales_invoice_id: id,
                         tipe_nota: tipeNota,
                         kode: $(this).data('kode'),
                         tanggal: $(this).data('tanggal'),
@@ -134,7 +142,7 @@ $items = old('items', isset($payment) ? $payment->items->toArray() : []);
             let retur = parseFloat($tr.find('input[name^="items["][name$="[retur]"]').val()) || 0;
             let panjar = parseFloat($tr.find('input[name^="items["][name$="[panjar]"]').val()) || 0;
             let lainnya = parseFloat($tr.find('input[name^="items["][name$="[lainnya]"]').val()) || 0;
-            let sub_total = kas + bank + giro + cndn + panjar + lainnya;
+            let sub_total = kas + bank + giro + cndn + panjar + lainnya + retur;
             $tr.find('input[name^="items["][name$="[sub_total]"]').val(sub_total.toFixed(2));
         });
 

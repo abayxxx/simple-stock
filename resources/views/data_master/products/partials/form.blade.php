@@ -4,6 +4,15 @@ $satuanList = $satuanList ?? ['BOX', 'PCS', 'BTL', 'UNIT', 'AMP', 'VIAL', 'TUBE'
 $satuanMassaList = $satuanMassaList ?? ['GRAM', 'KG', 'MG', 'LITER', 'ML', 'OUNCE'];
 @endphp
 
+@if ($errors->any())
+<div class="alert alert-danger">
+    <ul>
+        @foreach ($errors->all() as $error)
+        <li>{{ $error }}</li>
+        @endforeach
+    </ul>
+</div>
+@endif
 <ul class="nav nav-tabs" id="tabProduk" role="tablist">
     <li class="nav-item">
         <a class="nav-link active" id="umum-tab" data-toggle="tab" href="#umum" role="tab">Data Umum</a>
@@ -23,10 +32,12 @@ $satuanMassaList = $satuanMassaList ?? ['GRAM', 'KG', 'MG', 'LITER', 'ML', 'OUNC
                 <div class="form-group">
                     <label>Nama Produk <span class="text-danger">*</span></label>
                     <input name="nama" value="{{ old('nama', $product->nama ?? '') }}" class="form-control" required>
+                    @error('nama') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
                 <div class="form-group mb-3">
                     <label>Merk</label>
                     <input name="merk" value="{{ old('merk', $product->merk ?? '') }}" class="form-control">
+                    @error('merk') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
                 <div class="form-group">
                     <label>Satuan Kecil <span class="text-danger">*</span></label>
@@ -39,10 +50,12 @@ $satuanMassaList = $satuanMassaList ?? ['GRAM', 'KG', 'MG', 'LITER', 'ML', 'OUNC
                         </option>
                         @endforeach
                     </select>
+                    @error('satuan_kecil') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
                 <div class="form-group">
                     <label>Isi Satuan Kecil</label>
                     <input name="isi_satuan_kecil" value="{{ old('isi_satuan_kecil', $product->isi_satuan_kecil ?? 1) }}" class="form-control" type="number" min="1" required>
+                    @error('isi_satuan_kecil') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
                 <div class="form-group">
                     <label>Satuan Sedang</label>
@@ -55,6 +68,7 @@ $satuanMassaList = $satuanMassaList ?? ['GRAM', 'KG', 'MG', 'LITER', 'ML', 'OUNC
                         </option>
                         @endforeach
                     </select>
+                    @error('satuan_sedang') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
                 <div class="form-group">
                     <label>Isi Satuan Sedang</label>
@@ -71,10 +85,12 @@ $satuanMassaList = $satuanMassaList ?? ['GRAM', 'KG', 'MG', 'LITER', 'ML', 'OUNC
                         </option>
                         @endforeach
                     </select>
+                    @error('satuan_besar') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
                 <div class="form-group">
                     <label>Isi Satuan Besar</label>
                     <input name="isi_satuan_besar" value="{{ old('isi_satuan_besar', $product->isi_satuan_besar ?? 1) }}" class="form-control" type="number" min="1">
+                    @error('isi_satuan_besar') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
                 <div class="form-group">
                     <label>Satuan Massa</label>
@@ -87,14 +103,17 @@ $satuanMassaList = $satuanMassaList ?? ['GRAM', 'KG', 'MG', 'LITER', 'ML', 'OUNC
                         </option>
                         @endforeach
                     </select>
+                    @error('satuan_massa') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
                 <div class="form-group">
                     <label>Isi Satuan Massa</label>
                     <input name="isi_satuan_massa" value="{{ old('isi_satuan_massa', $product->isi_satuan_massa ?? 1) }}" class="form-control" type="number" min="1">
+                    @error('isi_satuan_massa') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
                 <div class="form-group">
                     <label>Catatan</label>
                     <textarea name="catatan" class="form-control">{{ old('catatan', $product->catatan ?? '') }}</textarea>
+                    @error('catatan') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
             </div>
         </div>
@@ -106,15 +125,18 @@ $satuanMassaList = $satuanMassaList ?? ['GRAM', 'KG', 'MG', 'LITER', 'ML', 'OUNC
                 <div class="form-group">
                     <label>HPP Bruto (Kecil)</label>
                     <input name="hpp_bruto_kecil" value="{{ old('hpp_bruto_kecil', $product->hpp_bruto_kecil ?? '') }}" class="form-control" type="number" step="0.01">
+                    @error('hpp_bruto_kecil') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
                 <div class="form-group">
                     <label>HPP Bruto (Besar)</label>
                     <input name="hpp_bruto_besar" value="{{ old('hpp_bruto_besar', $product->hpp_bruto_besar ?? '') }}" class="form-control" type="number" step="0.01">
+                    @error('hpp_bruto_besar') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
                 @for($i=1;$i<=5;$i++)
                     <div class="form-group">
                     <label>Diskon HPP {{ $i }}</label>
                     <input name="diskon_hpp_{{ $i }}" value="{{ old('diskon_hpp_'.$i, $product->{'diskon_hpp_'.$i} ?? '') }}" class="form-control" type="number" step="0.01">
+                    @error('diskon_hpp_'.$i) <div class="invalid-feedback">{{ $message }}</div> @enderror
             </div>
             @endfor
         </div>

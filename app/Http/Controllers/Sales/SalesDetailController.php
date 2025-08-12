@@ -19,7 +19,7 @@ class SalesDetailController extends Controller
     public function datatable(Request $request)
     {
         $query = SalesInvoiceItem::with(['invoice.customer', 'product'])
-            ->whereHas('invoice', function($q) use ($request) {
+            ->whereHas('invoice', function ($q) use ($request) {
                 if ($request->from) $q->whereDate('tanggal', '>=', $request->from);
                 if ($request->to) $q->whereDate('tanggal', '<=', $request->to);
             });
@@ -42,23 +42,23 @@ class SalesDetailController extends Controller
 
     public function exportExcel(Request $request)
     {
-       $from = $request->input('from', date('Y-m-01'));
-    $to   = $request->input('to', date('Y-m-d'));
+        $from = $request->input('from', date('Y-m-01'));
+        $to   = $request->input('to', date('Y-m-d'));
 
-    // Query item join invoice, customer, product, (bisa pakai with atau join)
-    $items = SalesInvoiceItem::with(['invoice.customer', 'product'])
-        ->whereHas('invoice', function($q) use ($from, $to) {
-            $q->whereBetween('tanggal', [$from, $to]);
-        })
-        ->orderBy('sales_invoice_id')
-        ->orderBy('product_id')
-        ->get();
+        // Query item join invoice, customer, product, (bisa pakai with atau join)
+        $items = SalesInvoiceItem::with(['invoice.customer', 'product'])
+            ->whereHas('invoice', function ($q) use ($from, $to) {
+                $q->whereBetween('tanggal', [$from, $to]);
+            })
+            ->orderBy('sales_invoice_id')
+            ->orderBy('product_id')
+            ->get();
 
-    // Group by faktur_no
-    $grouped = $items->groupBy(function($item) {
-        return $item->invoice->kode ?? '-';
-    });
+        // Group by faktur_no
+        $grouped = $items->groupBy(function ($item) {
+            return $item->invoice->kode ?? '-';
+        });
 
-    return Excel::download(new SalesDetailExport($grouped), 'FakturPenjualanDetail.xlsx');
+        return Excel::download(new SalesDetailExport($grouped), 'FakturPenjualanDetail.xlsx');
     }
 }

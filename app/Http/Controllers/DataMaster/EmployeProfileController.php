@@ -61,12 +61,21 @@ class EmployeProfileController extends Controller
 
     private function validateProfile(Request $request, $id = null)
     {
-        return $request->validate([
-            'nama' => 'required|string|max:255',
-            'no_telepon' => 'nullable|string|max:50',
-            'email' => 'nullable|email|max:100',
-            'alamat' => 'nullable|string|max:255',
-            'catatan' => 'nullable|string|max:500',
-        ]);
+        try {
+            $data = $request->validate([
+                'nama' => 'required|string|max:255',
+                'no_telepon' => 'nullable|string|max:50',
+                'email' => 'nullable|email|max:100',
+                'alamat' => 'nullable|string|max:255',
+                'catatan' => 'nullable|string|max:500',
+            ]);
+        } catch (\Throwable $th) {
+            return redirect()->back()->withErrors($th->getMessage())->withInput();
+        }
+
+        if ($id) {
+            $data['id'] = $id; // Include ID for update
+        }
+        return $data;
     }
 }
