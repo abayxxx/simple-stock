@@ -101,8 +101,6 @@
             supplier_id: supplierId,
         }, function(res) {
             let options = '<option value="">-- Pilih Faktur --</option>';
-            console.log(res)
-
             res.invoices.forEach(function(inv) {
                 options += `<option value="${inv.id}" data-cust="${inv.supplier_id}">${inv.kode}</option>`;
             });

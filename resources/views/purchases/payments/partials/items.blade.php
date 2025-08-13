@@ -52,7 +52,6 @@
         let $list = $('#selected-nota-list');
         $list.empty();
         notaList.forEach((item, idx) => {
-            console.log(item);
             $list.append(`
             <div class="card mb-3 shadow-sm border border-primary">
                 <div class="card-body p-3">
@@ -122,7 +121,7 @@
                         </div>
                         <div class="col-md-2">
                             <label>SUBTOTAL</label>
-                            <input name="items[${idx}][sub_total]" type="number" class="form-control subtotal-input" readonly value="${item.sub_total ?? 0}">
+                            <input name="items[${idx}][sub_total]" type="number" class="form-control subtotal-input" data-subtotal-db="${item.sub_total ?? 0}" readonly value="${item.sub_total ?? 0}">
                         </div>
                           <div class="col-md-2">
                             <label>RETUR di Faktur</label>
@@ -157,7 +156,14 @@
         let retur = parseFloat($card.find('.retur-input').val()) || 0;
         let nilaiNota = parseFloat($card.find('.nilai-nota').val()) || 0;
 
-        let sisaOld = parseFloat($card.find('.nilai-nota').val()) || 0;
+        let sisaOld = parseFloat($card.find('.nilai-nota').val()) !== parseFloat($card.find('.sisa-input').val()) ? 
+            parseFloat($card.find('.sisa-db').val()) || 0 : 
+            parseFloat($card.find('.nilai-nota').val()) || 0;
+        let subtotalDb = parseFloat($card.find('.subtotal-input').data('subtotal-db')) || 0;
+
+        if (subtotalDb > 0){
+                sisaOld = parseFloat($card.find('.nilai-nota').val()) || 0;
+            }
 
         // Get sisa from the card
 

@@ -227,6 +227,12 @@ class SalesInvoiceController extends Controller
 
     public function edit(SalesInvoice $invoice)
     {
+
+        //check if invoice is locked
+        if ($invoice->is_locked) {
+            return redirect()->route('sales.invoices.index')->withErrors(['error' => 'Faktur ini sudah terkunci dan tidak bisa diubah.']);
+        }
+
         $customers = CompanyProfile::orderBy('name')->get();
         $salesGroups = SalesGroup::orderBy('nama')->get();
         // load only products in purchases invoice

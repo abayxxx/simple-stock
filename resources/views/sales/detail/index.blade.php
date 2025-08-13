@@ -212,7 +212,6 @@
                     // Tambahkan warna ke row item
                     $(rows).eq(i).addClass('group-item-yellow');
 
-                    console.log(qty, disc1, disc2)
                     subtotalQty += qty;
                     subtotalDisc1 += disc1;
                     subtotalDisc2 += disc2;
