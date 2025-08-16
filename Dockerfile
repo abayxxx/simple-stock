@@ -47,7 +47,7 @@ ENV COMPOSER_MEMORY_LIMIT=-1
 
 # 2) install vendor WITHOUT scripts and WITHOUT autoloader
 RUN composer install \
-    --no-dev --prefer-dist --no-interaction --no-progress \
+     --prefer-dist --no-interaction --no-progress \
     --no-scripts --no-autoloader
 
 # 3) now copy the whole application so app/Helpers/helpers.php exists
