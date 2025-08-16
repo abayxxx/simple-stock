@@ -75,8 +75,7 @@ COPY --from=composerbuild /var/www/html /var/www/html
 COPY --from=nodebuild /app/public/build /var/www/html/public/build
 
 # Copy PHP-FPM pool config
-COPY docker/php/www.conf /usr/local/etc/php-fpm.d/zz-www.conf
-COPY docker/php/opcache.ini /usr/local/etc/php/conf.d/opcache.ini
+
 
 # permissions (keep storage/bootstrap writable)
 RUN mkdir -p storage/framework/{cache,sessions,views} storage/logs bootstrap/cache \
