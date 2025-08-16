@@ -11,8 +11,10 @@ RUN apk add --no-cache \
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
  && docker-php-ext-install -j$(nproc) intl zip mbstring pdo_mysql bcmath gd exif \
  && docker-php-ext-install opcache
-RUN pecl install redis \
-    && docker-php-ext-enable redis
+RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \
+ && pecl install redis \
+ && docker-php-ext-enable redis \
+ && apk del .build-deps
 
 # Opcache config
 COPY docker/php/opcache.ini /usr/local/etc/php/conf.d/opcache.ini
