@@ -11,6 +11,8 @@ RUN apk add --no-cache \
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
  && docker-php-ext-install -j$(nproc) intl zip mbstring pdo_mysql bcmath gd exif \
  && docker-php-ext-install opcache
+RUN pecl install redis \
+    && docker-php-ext-enable redis
 
 # Opcache config
 COPY docker/php/opcache.ini /usr/local/etc/php/conf.d/opcache.ini
@@ -69,6 +71,10 @@ COPY --from=composerbuild /var/www/html /var/www/html
 
 # bring built assets
 COPY --from=nodebuild /app/public/build /var/www/html/public/build
+
+# Copy PHP-FPM pool config
+COPY docker/php/www.conf /usr/local/etc/php-fpm.d/zz-www.conf
+COPY docker/php/opcache.ini /usr/local/etc/php/conf.d/opcache.ini
 
 # permissions (keep storage/bootstrap writable)
 RUN mkdir -p storage/framework/{cache,sessions,views} storage/logs bootstrap/cache \
