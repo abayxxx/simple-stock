@@ -14,7 +14,7 @@ class DebtReportController extends Controller
 {
     public function index(Request $request)
     {
-        $date = $request->get('tanggal', now()->toDateString());
+        $date = $request->get('tanggal', now()->toDateString() ?? now()->format('Y-m-d') . ' 00:00:00');
 
         if ($request->ajax()) {
             $supplierSummary = PurchasesInvoice::select([

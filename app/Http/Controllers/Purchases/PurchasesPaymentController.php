@@ -30,7 +30,7 @@ class PurchasesPaymentController extends Controller
         $query = PurchasesPayment::with('supplier', 'user')->orderByDesc('id');
 
         if ($awal && $akhir) {
-            $query->whereBetween('tanggal', [$awal, $akhir]);
+            $query->whereBetween('tanggal', [$awal . ' 00:00:00', $akhir . ' 23:59:59']);
         }
 
         if ($supplierId) {
@@ -70,7 +70,9 @@ class PurchasesPaymentController extends Controller
 
     public function create()
     {
-        $suppliers = CompanyProfile::orderBy('name')->get();
+        $suppliers = CompanyProfile::orderBy('name')
+            ->where('relationship', 'supplier')
+            ->get();
         return view('purchases.payments.create', compact('suppliers'));
     }
 
@@ -240,7 +242,9 @@ class PurchasesPaymentController extends Controller
     public function edit(PurchasesPayment $payment)
     {
         $payment->load('supplier', 'items.invoice', 'items.return');
-        $suppliers = CompanyProfile::orderBy('name')->get();
+        $suppliers = CompanyProfile::orderBy('name')
+            ->where('relationship', 'supplier')
+            ->get();
         return view('purchases.payments.edit', compact('payment', 'suppliers'));
     }
 

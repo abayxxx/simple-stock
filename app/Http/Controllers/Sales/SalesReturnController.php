@@ -26,7 +26,7 @@ class SalesReturnController extends Controller
         $query = SalesReturn::with('customer', 'salesGroup')->orderByDesc('id');
 
         if ($awal && $akhir) {
-            $query->whereBetween('tanggal', [$awal, $akhir]);
+            $query->whereBetween('tanggal', [$awal . ' 00:00:00', $akhir . ' 23:59:59']);
         }
 
         if ($salesGroupId) {
@@ -85,7 +85,9 @@ class SalesReturnController extends Controller
 
     public function create()
     {
-        $customers = CompanyProfile::orderBy('name')->get();
+        $customers = CompanyProfile::orderBy('name')
+            ->where('relationship', 'customer')
+            ->get();
         $salesGroups = SalesGroup::orderBy('nama')->get();
        
         $branches = CompanyBranch::orderBy('name')->get();
@@ -186,7 +188,9 @@ class SalesReturnController extends Controller
 
     public function edit(SalesReturn $return)
     {
-        $customers = CompanyProfile::orderBy('name')->get();
+        $customers = CompanyProfile::orderBy('name')
+            ->where('relationship', 'customer')
+            ->get();
         $salesGroups = SalesGroup::orderBy('nama')->get();
         // load only products in purchases invoice
         $products = Product::whereIn('id', $return->items->pluck('product_id'))->orderBy('nama')->get();

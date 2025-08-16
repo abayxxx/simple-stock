@@ -19,8 +19,8 @@ class StockListController extends Controller
     public function datatable(Request $request)
     {
         // Tanggal periode
-        $awal  = $request->input('periode_awal') ?? now()->format('Y-m-d');
-        $akhir = $request->input('periode_akhir') ?? now()->format('Y-m-d');
+        $awal  = $request->input('periode_awal')  . ' 00:00:00';
+        $akhir = $request->input('periode_akhir') . ' 23:59:59';
 
         // Ambil semua produk (bisa filter aktif, dll)
         $products = Product::query();

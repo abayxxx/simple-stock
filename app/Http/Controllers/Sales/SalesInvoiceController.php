@@ -30,7 +30,7 @@ class SalesInvoiceController extends Controller
         $query = SalesInvoice::with(['customer', 'location', 'salesGroup'])->orderByDesc('id');
 
         if ($awal && $akhir) {
-            $query->whereBetween('tanggal', [$awal, $akhir]);
+            $query->whereBetween('tanggal', [$awal . ' 00:00:00', $akhir . ' 23:59:59']);
         }
         if ($customerId) {
             $query->where('company_profile_id', $customerId);
@@ -110,7 +110,9 @@ class SalesInvoiceController extends Controller
 
     public function create()
     {
-        $customers = CompanyProfile::orderBy('name')->get();
+        $customers = CompanyProfile::orderBy('name')
+        ->where('relationship', 'customer')
+        ->get();
         $salesGroups = SalesGroup::orderBy('nama')->get();
        
         $branches = CompanyBranch::orderBy('name')->get();
@@ -233,7 +235,9 @@ class SalesInvoiceController extends Controller
             return redirect()->route('sales.invoices.index')->withErrors(['error' => 'Faktur ini sudah terkunci dan tidak bisa diubah.']);
         }
 
-        $customers = CompanyProfile::orderBy('name')->get();
+        $customers = CompanyProfile::orderBy('name')
+            ->where('relationship', 'customer')
+            ->get();
         $salesGroups = SalesGroup::orderBy('nama')->get();
         // load only products in purchases invoice
         $products = Product::whereIn('id', $invoice->items->pluck('product_id'))->orderBy('nama')->get();

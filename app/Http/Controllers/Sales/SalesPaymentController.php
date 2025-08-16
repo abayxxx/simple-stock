@@ -31,7 +31,7 @@ class SalesPaymentController extends Controller
         $query = SalesPayment::with('customer', 'user')->orderByDesc('id');
 
         if ($awal && $akhir) {
-            $query->whereBetween('tanggal', [$awal, $akhir]);
+            $query->whereBetween('tanggal', [$awal . ' 00:00:00', $akhir . ' 23:59:59']);
         }
 
         if ($customerId) {
@@ -71,7 +71,9 @@ class SalesPaymentController extends Controller
 
     public function create()
     {
-        $customers = CompanyProfile::orderBy('name')->get();
+        $customers = CompanyProfile::orderBy('name')
+            ->where('relationship', 'customer')
+            ->get();
         return view('sales.payments.create', compact('customers'));
     }
 
@@ -242,7 +244,9 @@ class SalesPaymentController extends Controller
     public function edit(SalesPayment $payment)
     {
         $payment->load('customer', 'items.invoice', 'items.return');
-        $customers = CompanyProfile::orderBy('name')->get();
+        $customers = CompanyProfile::orderBy('name')
+            ->where('relationship', 'customer')
+            ->get();
         return view('sales.payments.edit', compact('payment', 'customers'));
     }
 

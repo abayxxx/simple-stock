@@ -61,6 +61,7 @@ class StockController extends Controller
         $data['type'] = $type;
 
         // Validasi stok tidak boleh minus (khusus 'out' dan 'destroy')
+        $textType = $type == 'in' ? 'Penambahan' : ($type == 'out' ? 'Pengurangan' : 'Pemusnahan');
         if (in_array($type, ['out', 'destroy'])) {
             $sisa = $this->calculateSisaStok($data['product_id']);
             if ($data['jumlah'] > $sisa) {
@@ -70,10 +71,10 @@ class StockController extends Controller
             }
         }
 
-        DB::transaction(function () use ($data, &$stock) {
+        DB::transaction(function () use ($data, &$stock , $textType) {
             $stock = Stock::create($data);
             $stock->sisa_stok = $this->calculateSisaStok($stock->product_id);
-            $stock->catatan = $data['catatan'] ?? 'Penambahan stok ' . $stock->product->nama . ' pada tanggal ' . now()->format('Y-m-d H:i:s');
+            $stock->catatan = $data['catatan'] ?? $textType . ' stok ' . $stock->product->nama . ' pada tanggal ' . now()->format('Y-m-d H:i:s');
             $stock->save();
         });
         return redirect()->route("stock.$type")->with('success', 'Transaksi stok berhasil ditambahkan.');
@@ -92,6 +93,7 @@ class StockController extends Controller
         $data = $this->validateStock($request);
 
         // Validasi stok tidak boleh minus (khusus 'out' dan 'destroy')
+        $textType = $type == 'in' ? 'Penambahan' : ($type == 'out' ? 'Pengurangan' : 'Pemusnahan');
         if (in_array($type, ['out', 'destroy'])) {
             $sisa = $this->calculateSisaStok($data['product_id']);
             // Tambahkan jumlah stok lama (karena stok lama akan diupdate)
@@ -105,7 +107,7 @@ class StockController extends Controller
 
         $stock->update($data);
         $stock->sisa_stok = $this->calculateSisaStok($stock->product_id);
-        $stock->catatan = $data['catatan'] ?? 'Update stok ' . $stock->product->nama . ' pada tanggal ' . now()->format('Y-m-d H:i:s');
+        $stock->catatan = $data['catatan'] ?? 'Update ' . $textType . ' stok ' . $stock->product->nama . ' pada tanggal ' . now()->format('Y-m-d H:i:s');
         $stock->save();
         return redirect()->route("stock.$type")->with('success', 'Transaksi stok berhasil diupdate.');
     }

@@ -24,7 +24,7 @@ class PurchasesReturnController extends Controller
         $query = PurchasesReturn::with('supplier')->orderByDesc('id');
 
         if ($awal && $akhir) {
-            $query->whereBetween('tanggal', [$awal, $akhir]);
+            $query->whereBetween('tanggal', [$awal . ' 00:00:00', $akhir . ' 23:59:59']);
         }
 
         if ($supplierId) {
@@ -77,7 +77,9 @@ class PurchasesReturnController extends Controller
 
     public function create()
     {
-        $suppliers = CompanyProfile::orderBy('name')->get();
+        $suppliers = CompanyProfile::orderBy('name')
+            ->where('relationship', 'supplier')
+            ->get();
       
         $branches = CompanyBranch::orderBy('name')->get();
         $invoices = PurchasesInvoice::orderBy('tanggal', 'desc')->get();
@@ -173,7 +175,9 @@ class PurchasesReturnController extends Controller
 
     public function edit(PurchasesReturn $return)
     {
-        $suppliers = CompanyProfile::orderBy('name')->get();
+        $suppliers = CompanyProfile::orderBy('name')
+            ->where('relationship', 'supplier')
+            ->get();
         $products = Product::whereIn('id', $return->items->pluck('product_id'))->orderBy('nama')->get();
         $branches = CompanyBranch::orderBy('name')->get();
         $invoices = PurchasesInvoice::orderBy('tanggal', 'desc')->get();

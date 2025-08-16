@@ -143,7 +143,7 @@ $existingItems = old('items', isset($invoice) ? $invoice->items->toArray() : [])
         let products = @json(collect($products)->keyBy('id'));
 
         function renderReviewRow(item, idx) {
-            let produk = products[item.product_id] ? (products[item.product_id].kode + ' - ' + products[item.product_id].nama) : '';
+            let produk = products[item.product_id] ? (products[item.product_id].kode + ' - ' + products[item.product_id].nama) : item.product_name;
             return `<tr data-index="${idx}">
         <td style="white-space:nowrap">${produk}</td>
         <td>${item.no_seri||''}</td>
@@ -195,6 +195,7 @@ $existingItems = old('items', isset($invoice) ? $invoice->items->toArray() : [])
         $('#btn-add-item').click(function() {
             let item = {
                 product_id: $('#add-product_id').val(),
+                product_name: $('#add-product_id option:selected').text(),
                 no_seri: $('#add-no_seri').val(),
                 tanggal_expired: $('#add-tanggal_expired').val(),
                 qty: $('#add-qty').val(),

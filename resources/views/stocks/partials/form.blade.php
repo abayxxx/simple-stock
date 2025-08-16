@@ -1,4 +1,12 @@
-@php $stock = $stock ?? null; @endphp
+@php
+$stock = $stock ?? null;
+$selectedId = old('product_id', $stock->product_id ?? null);
+    $selectedText = null;
+
+    if ($selectedId && ($stock?->product)) {
+        $selectedText = $stock->product->kode . ' - ' . $stock->product->nama;
+    }
+@endphp
 @if ($errors->any())
 <div class="alert alert-danger">
     @foreach ($errors->all() as $err)
@@ -8,13 +16,11 @@
 @endif
 <div class="form-group mb-3">
     <label>Produk <span class="text-danger">*</span></label>
-    <select name="product_id" class="form-control @error('product_id') is-invalid @enderror" required>
+    <select name="product_id" id="product_id" class="form-control @error('product_id') is-invalid @enderror" required>
         <option value="">-- Pilih Produk --</option>
-        @foreach($products as $p)
-        <option value="{{ $p->id }}" {{ old('product_id', $stock->product_id ?? '') == $p->id ? 'selected' : '' }}>
-            {{ $p->nama }} ({{ $p->kode }})
-        </option>
-        @endforeach
+        @if ($selectedId && $selectedText)
+        <option value="{{ $selectedId }}" selected>{{ $selectedText }}</option>
+    @endif
     </select>
     @error('product_id')
     <div class="invalid-feedback">{{ $message }}</div>
@@ -81,6 +87,7 @@
 
 
 @push('js')
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
     $(function() {
         let type = "{{ $type ?? 'in' }}";
@@ -118,6 +125,35 @@
         $('[name="jumlah"]').on('input', updateSisaStok);
         $('[name="jumlah"], [name="harga_net"]').on('input', hitungSubtotal);
 
+         $('#product_id').select2({
+            placeholder: '-- Pilih Produk --',
+            minimumInputLength: 2,
+            ajax: {
+                url: '{{ url("admin/products/search") }}',
+                dataType: 'json',
+                delay: 250,
+                data: function (params) {
+                    return {
+                        q: params.term // user typed text
+                    };
+                },
+                processResults: function (data) {
+                    // Expect: [{id:1, text:"001-Produk A", satuan_kecil:"pcs"}, ...]
+                    return {
+                        results: data.map(function(p) {
+                            return {
+                                id: p.id,
+                                text: p.kode + ' - ' + p.nama,
+                                satuan_kecil: p.satuan_kecil
+                            }
+                        })
+                    };
+                }
+            }
+        });
+
+      
+
         // Trigger pertama kali jika edit
         @php
         $shouldTrigger = old('product_id', $stock->product_id ?? false) ? 'true' : 'false';
@@ -127,4 +163,33 @@
         }
     });
 </script>
+@endpush
+
+@push('css')
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>
+
+    /* Match Select2 single select to Bootstrap 4/5 .form-control */
+    .select2-container--default .select2-selection--single {
+        height: 38px !important; /* Default Bootstrap 4/5 input height */
+        padding: 6px 12px !important;
+        font-size: 1rem !important;
+        border: 1px solid #ced4da !important;
+        border-radius: 0.25rem !important; /* For Bootstrap 4, use 0.375rem for Bootstrap 5 */
+        display: flex;
+        align-items: center;
+        box-sizing: border-box;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 24px !important;
+        padding-left: 0 !important;
+    }
+
+    .select2-selection__arrow {
+        height: 36px !important;
+        right: 6px;
+        top: 1px;
+    }
+</style>
 @endpush

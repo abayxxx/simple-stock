@@ -8,6 +8,7 @@
 @section('content')
 <form action="{{ route('stock.update', ['type' => $type, 'stock' => $stock->id]) }}" method="POST">
     @csrf
+    @method('PUT')
     @include('stocks.partials.form', ['products' => $products, 'stock' => $stock ?? null])
     <button type="submit" class="btn btn-primary">Simpan</button>
     <a href="{{ route('stock.' . $type) }}" class="btn btn-secondary">Kembali</a>

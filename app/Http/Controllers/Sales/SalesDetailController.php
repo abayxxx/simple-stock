@@ -20,8 +20,8 @@ class SalesDetailController extends Controller
     {
         $query = SalesInvoiceItem::with(['invoice.customer', 'product'])
             ->whereHas('invoice', function ($q) use ($request) {
-                if ($request->from) $q->whereDate('tanggal', '>=', $request->from);
-                if ($request->to) $q->whereDate('tanggal', '<=', $request->to);
+                if ($request->from) $q->whereDate('tanggal', '>=', $request->from . ' 00:00:00');
+                if ($request->to) $q->whereDate('tanggal', '<=', $request->to . ' 23:59:59');
             });
 
         return DataTables::of($query)
@@ -48,7 +48,7 @@ class SalesDetailController extends Controller
         // Query item join invoice, customer, product, (bisa pakai with atau join)
         $items = SalesInvoiceItem::with(['invoice.customer', 'product'])
             ->whereHas('invoice', function ($q) use ($from, $to) {
-                $q->whereBetween('tanggal', [$from, $to]);
+                $q->whereBetween('tanggal', [$from . ' 00:00:00', $to . ' 23:59:59']);
             })
             ->orderBy('sales_invoice_id')
             ->orderBy('product_id')

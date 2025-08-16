@@ -25,8 +25,8 @@ class StockCardController extends Controller
     {
         $productId = $request->product_id;
         $branchId  = $request->lokasi_id;
-        $awal      = $request->periode_awal ?? now()->format('Y-m-d');
-        $akhir     = $request->periode_akhir ?? now()->format('Y-m-d');
+        $awal      = $request->periode_awal  . ' 00:00:00';
+        $akhir     = $request->periode_akhir . ' 23:59:59';
 
         $q = Stock::with(['product'])
             ->where('product_id', $productId)

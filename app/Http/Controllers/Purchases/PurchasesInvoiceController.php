@@ -25,7 +25,7 @@ class PurchasesInvoiceController extends Controller
         $query = PurchasesInvoice::with('supplier')->orderByDesc('id');
 
         if ($awal && $akhir) {
-            $query->whereBetween('tanggal', [$awal, $akhir]);
+            $query->whereBetween('tanggal', [$awal . ' 00:00:00', $akhir . ' 23:59:59']);
         }
 
         if ($supplierId) {
@@ -89,7 +89,9 @@ class PurchasesInvoiceController extends Controller
 
     public function create()
     {
-        $suppliers = CompanyProfile::orderBy('name')->get();
+        $suppliers = CompanyProfile::orderBy('name')
+            ->where('relationship', 'supplier')
+            ->get();
         $branches = CompanyBranch::orderBy('name')->get();
         // Load products for dropdown
         return view('purchases.invoices.create', compact('suppliers', 'branches'));
@@ -188,7 +190,9 @@ class PurchasesInvoiceController extends Controller
 
     public function edit(PurchasesInvoice $invoice)
     {
-        $suppliers = CompanyProfile::orderBy('name')->get();
+        $suppliers = CompanyProfile::orderBy('name')
+            ->where('relationship', 'supplier')
+            ->get();
         // load only products in purchases invoice
         $products = Product::whereIn('id', $invoice->items->pluck('product_id'))->orderBy('nama')->get();
         $branches = CompanyBranch::orderBy('name')->get();

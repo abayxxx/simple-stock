@@ -47,7 +47,7 @@ class UserController extends Controller
                 'name' => 'required|string|max:100',
                 'email' => 'required|email|max:100|unique:users',
                 'password' => 'required|string|min:6|confirmed',
-                'is_admin' => 'boolean',
+                'role' => 'required|in:admin,sales,superadmin', // Validasi role harus admin atau user
                 'company_branch_id' => 'nullable|exists:company_branches,id', // Validasi untuk company_branch_id
             ]);
         } catch (\Throwable $th) {
@@ -63,7 +63,7 @@ class UserController extends Controller
     public function edit(User $user)
     {
         $branch = CompanyBranch::all();
-        $user->load('branch'); // Load relasi cabang jika ada
+        $user->load('companyBranch'); // Load relasi cabang jika ada
         return view('admin.edit', compact('user', 'branch'));
     }
 
@@ -75,7 +75,7 @@ class UserController extends Controller
                 'name' => 'required|string|max:100',
                 'email' => 'required|email|max:100|unique:users,email,' . $user->id,
                 'password' => 'nullable|string|min:6|confirmed',
-                'is_admin' => 'boolean',
+                'role' => 'required|in:admin,sales,superadmin', // Validasi role harus admin atau user
                 'company_branch_id' => 'nullable|exists:company_branches,id', // Validasi untuk company_branch_id
             ]);
         } catch (\Throwable $th) {

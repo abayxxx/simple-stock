@@ -29,7 +29,7 @@ class SalesReceiptController extends Controller
         $query = SalesReceipt::with('customer', 'collector', 'receiptItems')
             ->orderByDesc('id');
         if ($awal && $akhir) {
-            $query->whereBetween('tanggal', [$awal, $akhir]);
+            $query->whereBetween('tanggal', [$awal . ' 00:00:00', $akhir . ' 23:59:59']);
         }
         if ($customerId) {
             $query->where('company_profile_id', $customerId);
@@ -82,7 +82,9 @@ class SalesReceiptController extends Controller
 
     public function create()
     {
-        $customers = CompanyProfile::orderBy('name')->get();
+        $customers = CompanyProfile::orderBy('name')
+            ->where('relationship', 'customer')
+            ->get();
         $employees = EmployeProfile::orderBy('nama')->get();
 
         // Hanya tarik faktur penjualan yang belum pernah diterima
@@ -180,7 +182,9 @@ class SalesReceiptController extends Controller
     public function edit(SalesReceipt $receipt)
     {
         $receipt->load('customer', 'collector', 'receiptItems.invoice');
-        $customers = CompanyProfile::orderBy('name')->get();
+        $customers = CompanyProfile::orderBy('name')
+            ->where('relationship', 'customer')
+            ->get();
         $employees = EmployeProfile::orderBy('nama')->get();
 
         // Hanya tarik faktur penjualan yang belum pernah diterima
