@@ -20,7 +20,7 @@ return new class extends Migration
             $table->string('phone')->nullable();
             $table->string('email')->nullable();
             $table->string('website')->nullable();
-            $table->enum('relationship', ['customer', 'supplier', 'other'])->default('other'); // Default relationship type
+            $table->enum('relationship', ['customer', 'supplier','supplier & customer','other'])->default('other'); // Default relationship type
             $table->string('npwp')->nullable(); // Tax ID
             $table->string('tax_invoice_to')->nullable(); // Name for tax invoice
             $table->string('tax_invoice_address')->nullable(); // Address for tax invoice
