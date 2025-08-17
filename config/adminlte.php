@@ -491,6 +491,20 @@ return [
                     'label_color' => 'success',
                     'can' => ['isSuperAdmin', 'isAdmin'],
                 ],
+                [
+                    'text' => 'Faktur Pembelian Detail',
+                    'url' => 'admin/purchases/detail',
+                    'icon' => 'fas fa-fw fa-file-invoice',
+                    'label_color' => 'success',
+                    'can' => ['isSuperAdmin', 'isAdmin'],
+                ],
+                [
+                    'text' => 'Faktur Pembelian Belum Lunas',
+                    'url' => 'admin/purchases/unpaid',
+                    'icon' => 'fas fa-fw fa-file-invoice',
+                    'label_color' => 'success',
+                    'can' => ['isSuperAdmin', 'isAdmin'],
+                ]
             ],
         ],
         ['header' => 'account_settings'],

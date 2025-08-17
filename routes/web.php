@@ -24,7 +24,8 @@ use App\Http\Controllers\Settings\SettingsController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Finances\ReceiveableReportController;
 use App\Http\Controllers\Finances\DebtReportController;
-
+use App\Http\Controllers\Purchases\PurchasesDetailController;
+use App\Http\Controllers\Purchases\PurchasesUnpaidController;
 
 Route::get('/', function () {
     return view('auth.login');
@@ -105,6 +106,10 @@ Route::middleware('auth')->group(function () {
 
             Route::get('invoices/filter-options', [SalesInvoiceController::class, 'filterOptions'])
                 ->name('invoices.filter-options');
+            Route::get('invoices/export', [SalesInvoiceController::class, 'export'])
+                ->name('invoices.export');
+            Route::get('invoices/export-pdf', [SalesInvoiceController::class, 'exportPdf'])
+                ->name('invoices.exportPdf');
             Route::resource('invoices', SalesInvoiceController::class);
 
             // *Sales Returns*
@@ -175,6 +180,16 @@ Route::middleware('auth')->group(function () {
             Route::get('payments/{payment}/print', [PurchasesPaymentController::class, 'print'])->name('payments.print');
             Route::get('payments/filter-options', [PurchasesPaymentController::class, 'filterOptions'])->name('payments.filter-options');
             Route::resource('payments', PurchasesPaymentController::class);
+
+                // *Detail*
+            Route::get('detail', [PurchasesDetailController::class, 'index'])->name('detail.index');
+            Route::get('detail/data', [PurchasesDetailController::class, 'datatable'])->name('detail.data');
+            Route::get('detail/export', [PurchasesDetailController::class, 'exportExcel'])->name('detail.export');
+
+            // *Unpaid*
+            Route::get('unpaid', [PurchasesUnpaidController::class, 'index'])->name('unpaid.index');
+            Route::get('unpaid/data', [PurchasesUnpaidController::class, 'data'])->name('unpaid.data');
+            Route::get('unpaid/export', [PurchasesUnpaidController::class, 'export'])->name('unpaid.export');
         });
 
 

@@ -308,10 +308,10 @@ class PurchasesInvoiceController extends Controller
 
     protected static function generateKode()
     {
-        $prefix = 'PI.' . date('ym') . '.';
+        $prefix = 'PI.' . date('dm') . '.';
         $last = PurchasesInvoice::where('kode', 'like', $prefix . '%')->max('kode');
         $urut = $last ? (int)substr($last, 8) + 1 : 1;
-        return $prefix . str_pad($urut, 5, '0', STR_PAD_LEFT);
+        return $prefix . str_pad($urut, 5, '0', STR_PAD_LEFT) . '.' . date('y');
     }
 
     public function calculateSisaStok($product_id)

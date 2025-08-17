@@ -4,6 +4,7 @@
 
 namespace App\Http\Controllers\Sales;
 
+use App\Exports\SalesInvoicesExport;
 use App\Models\SalesInvoice;
 use App\Models\SalesInvoiceItem;
 use App\Models\CompanyProfile;
@@ -15,6 +16,8 @@ use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
 use App\Http\Controllers\Controller;
 use App\Models\Stock;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Maatwebsite\Excel\Facades\Excel;
 
 class SalesInvoiceController extends Controller
 {
@@ -366,10 +369,10 @@ class SalesInvoiceController extends Controller
 
     protected static function generateKode()
     {
-        $prefix = 'SI.' . date('ym') . '.';
+        $prefix = 'HR.' . date('dm') . '.';
         $last = SalesInvoice::where('kode', 'like', $prefix . '%')->max('kode');
         $urut = $last ? (int)substr($last, 8) + 1 : 1;
-        return $prefix . str_pad($urut, 5, '0', STR_PAD_LEFT);
+        return $prefix . str_pad($urut, 5, '0', STR_PAD_LEFT) . '.' . date('y');
     }
 
     public function calculateSisaStok($product_id)
@@ -449,5 +452,65 @@ class SalesInvoiceController extends Controller
             'locations'    => $locations,
             'sales_groups' => $salesGroups,
         ]);
+    }
+
+    public function export(Request $request)
+    {
+        return Excel::download(
+            new SalesInvoicesExport(
+                awal: $request->periode_awal,
+                akhir: $request->periode_akhir,
+                customerId: $request->customer_id,
+                lokasiId: $request->lokasi_id,
+                salesGroupId: $request->sales_group_id
+            ),
+            'daftar_faktur_penjualan.xlsx'
+        );
+    }
+
+    public function exportPdf(Request $request)
+    {
+        // Read filters from query or session fallback (if you stored them in datatable())
+        $awal         = $request->input('periode_awal');
+        $akhir        = $request->input('periode_akhir');
+        $customerId   = $request->input('customer_id');
+        $lokasiId     = $request->input('lokasi_id');
+        $salesGroupId = $request->input('sales_group_id');
+
+        // Memory-friendly SELECT with joins (no Eloquent relations)
+        $q = DB::table('sales_invoices as si')
+            ->leftJoin('company_profiles as cp', 'cp.id', '=', 'si.company_profile_id')
+            ->leftJoin('sales_groups as sg', 'sg.id', '=', 'si.sales_group_id')
+            ->select([
+                'si.tanggal',
+                'si.kode',
+                DB::raw('COALESCE(cp.name, "-") as customer_name'),
+                DB::raw('COALESCE(sg.nama, "-") as sales_name'),
+                'si.jatuh_tempo',
+                'si.grand_total',
+            ])
+            ->when($awal && $akhir, fn($qq) => $qq->whereBetween('si.tanggal', [$awal.' 00:00:00', $akhir.' 23:59:59']))
+            ->when($customerId, fn($qq) => $qq->where('si.company_profile_id', $customerId))
+            ->when($lokasiId, fn($qq) => $qq->where('si.lokasi_id', $lokasiId))
+            ->when($salesGroupId, fn($qq) => $qq->where('si.sales_group_id', $salesGroupId))
+            ->orderBy('si.tanggal');
+
+        // You can limit for very large PDFs (PDFs aren’t great for tens of thousands of rows)
+        $rows = $q->get();
+
+        $periodeText = ($awal && $akhir)
+            ? date('d M Y', strtotime($awal)) . ' s/d ' . date('d M Y', strtotime($akhir))
+            : '-';
+
+        $total = $rows->sum('grand_total');
+
+        $pdf = Pdf::loadView('sales.invoices.export_pdf', [
+            'rows'        => $rows,
+            'periodeText' => $periodeText,  
+            'total'       => $total,
+        ])->setPaper('a4', 'portrait'); // or 'landscape'
+
+        // ->download() to force download, or ->stream() to preview in browser
+        return $pdf->download('daftar_faktur_penjualan.pdf');
     }
 }

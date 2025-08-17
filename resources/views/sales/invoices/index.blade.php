@@ -12,6 +12,14 @@
 @endif
 <div class="mb-3">
     <a href="{{ route('sales.invoices.create') }}" class="btn btn-primary"><i class="fa fa-plus"></i> Tambah Tanda Terima</a>
+    <a href="#" class="btn btn-success" id="export-btn" target="_blank">
+        <i class="fa fa-file-excel"></i>
+  Export Excel
+</a>
+<a href="#" class="btn btn-danger" id="export-pdf-btn" target="_blank">
+    <i class="fa fa-file-pdf"></i>
+    Export PDF
+</a>
 </div>
 <div class="card shadow">
     <div class="card-header">
@@ -282,6 +290,35 @@
 
         // optional: first load (if you want them empty until dates picked, you can skip this)
         loadFilterOptions();
+
+        function buildExportUrl() {
+            let periodeAwal = $('#periode_awal').val();
+            let periodeAkhir = $('#periode_akhir').val();
+            
+            let customer =  $('#filter_customer').val();
+            let lokasi = $('#filter_lokasi').val();
+            let salesGroup = $('#filter_sg').val();
+            return "{{ route('sales.invoices.export') }}" + "?periode_awal=" + periodeAwal + "&periode_akhir=" + periodeAkhir + "&customer_id=" + customer + "&lokasi_id=" + lokasi + "&sales_group_id=" + salesGroup;
+        }
+        $('#export-btn').attr('href', buildExportUrl());
+        $('#periode_awal, #periode_akhir, #filter_customer, #filter_lokasi, #filter_sg').on('change', function() {
+            $('#export-btn').attr('href', buildExportUrl());
+        });
+
+        // PDF export
+        function buildExportPdfUrl() {
+            let periodeAwal = $('#periode_awal').val();
+            let periodeAkhir = $('#periode_akhir').val();
+            
+            let customer =  $('#filter_customer').val();
+            let lokasi = $('#filter_lokasi').val();
+            let salesGroup = $('#filter_sg').val();
+            return "{{ route('sales.invoices.exportPdf') }}" + "?periode_awal=" + periodeAwal + "&periode_akhir=" + periodeAkhir + "&customer_id=" + customer + "&lokasi_id=" + lokasi + "&sales_group_id=" + salesGroup;
+        }
+        $('#export-pdf-btn').attr('href', buildExportPdfUrl());
+        $('#periode_awal, #periode_akhir, #filter_customer, #filter_lokasi, #filter_sg').on('change', function() {
+            $('#export-pdf-btn').attr('href', buildExportPdfUrl());
+        });
     });
 </script>
 @endpush
