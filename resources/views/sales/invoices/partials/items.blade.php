@@ -117,7 +117,6 @@ $existingItems = old('items', isset($invoice) ? $invoice->items->toArray() : [])
                 <th>Qty</th>
                 <th>Satuan</th>
                 <th>Harga</th>
-                <th>Sisa Stok</th>
                 <th>Subtotal Sblm Diskon</th>
                 <th>D1 (%)</th>
                 <th>D1 (Rp)</th>
@@ -130,7 +129,7 @@ $existingItems = old('items', isset($invoice) ? $invoice->items->toArray() : [])
                 <th>PPN (%)</th>
                 <th>Subtotal Stlh PPN</th>
                 <th>Catatan</th>
-                <th>Hapus</th>
+                <th>Action</th>
             </tr>
         </thead>
         <tbody>
@@ -147,6 +146,7 @@ $existingItems = old('items', isset($invoice) ? $invoice->items->toArray() : [])
 
 @push('js')
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="{{ asset('js/helper.js') }}"></script>
 <script>
     let itemIndex = 0;
 
@@ -159,13 +159,12 @@ $existingItems = old('items', isset($invoice) ? $invoice->items->toArray() : [])
          let produk = products[item.product_id] ? (products[item.product_id].kode + ' - ' + products[item.product_id].nama) : item.product_name;
         let lokasi = branches[item.lokasi_id] ? branches[item.lokasi_id].name : '';
         return `<tr data-index="${idx}">
-        <td style="white-space:nowrap">${produk}</td>
+        <td style="white-space:nowrap" data-product-id="${item.product_id}">${produk}</td>
         <td>${item.no_seri||''}</td>
         <td>${item.tanggal_expired||''}</td>
         <td>${item.qty||''}</td>
         <td>${(item.satuan||'').toUpperCase()}</td>
         <td>${item.harga_satuan||''}</td>
-        <td>${item.sisa_stok||''}</td>
         <td>${item.sub_total_sblm_disc||''}</td>
         <td>${item.diskon_1_persen||''}</td>
         <td>${item.diskon_1_rupiah||''}</td>
@@ -178,7 +177,11 @@ $existingItems = old('items', isset($invoice) ? $invoice->items->toArray() : [])
         <td>${item.ppn_persen||''}</td>
         <td>${item.sub_total_setelah_disc||''}</td>
         <td>${item.catatan||''}</td>
-        <td><button type="button" class="btn btn-danger btn-sm btn-remove-item"><i class="fa fa-trash"></i></button></td>
+  
+        <td>
+        <button type="button" class="btn btn-danger btn-sm btn-remove-item"><i class="fa fa-trash"></i></button>
+        <button type="button" class="btn btn-primary btn-sm btn-edit-item"><i class="fa fa-edit"></i></button>
+        </td>
     </tr>`;
     }
 
@@ -204,6 +207,7 @@ $existingItems = old('items', isset($invoice) ? $invoice->items->toArray() : [])
             $('#review-items-table tbody').append(renderReviewRow(item, itemIndex));
             $('#hidden-inputs-container').append(renderHiddenInputs(item, itemIndex));
             itemIndex++;
+
         });
     }
 
@@ -232,7 +236,7 @@ $existingItems = old('items', isset($invoice) ? $invoice->items->toArray() : [])
             catatan: $('#add-catatan').val()
         };
         // Validation example
-        if (!item.product_id  || !item.qty || !item.harga_satuan || !item.tanggal_expired || !item.no_seri) {
+        if (!item.product_id  || !item.qty || !item.harga_satuan ) {
             alert('Lengkapi data item terlebih dahulu.');
             return;
         }
@@ -257,6 +261,66 @@ $existingItems = old('items', isset($invoice) ? $invoice->items->toArray() : [])
         $(`#hidden-inputs-container .item-hidden[data-index="${idx}"]`).remove();
 
         updateSummary(); // Update summary after removal
+    });
+
+    // Edit Row
+   $('#review-items-table').on('click', '.btn-edit-item', function() {
+        let $tr = $(this).closest('tr');
+        let idx = $tr.data('index');
+        let item = {
+            product_id: $tr.find('td:eq(0)').data('product-id'),
+            no_seri: $tr.find('td:eq(1)').text(),
+            tanggal_expired: $tr.find('td:eq(2)').text(),
+            qty: $tr.find('td:eq(3)').text(),
+            satuan: $tr.find('td:eq(4)').text(),
+            harga_satuan: $tr.find('td:eq(5)').text(),
+            sub_total_sblm_disc: $tr.find('td:eq(6)').text(),
+            diskon_1_persen: $tr.find('td:eq(7)').text(),
+            diskon_1_rupiah: $tr.find('td:eq(8)').text(),
+            diskon_2_persen: $tr.find('td:eq(9)').text(),
+            diskon_2_rupiah: $tr.find('td:eq(10)').text(),
+            diskon_3_persen: $tr.find('td:eq(11)').text(),
+            diskon_3_rupiah: $tr.find('td:eq(12)').text(),
+            total_diskon_item: $tr.find('td:eq(13)').text(),
+            sub_total_sebelum_ppn: $tr.find('td:eq(14)').text(),
+            ppn_persen: $tr.find('td:eq(15)').text(),
+            sub_total_setelah_disc: $tr.find('td:eq(16)').text(),
+            catatan: $tr.find('td:eq(18)').text()
+        };
+         // Prefill Select2 correctly
+        const p = products[item.product_id] || { id: item.product_id, kode: '', nama: item.product_name || '', satuan_kecil: '' };
+        console.log('Editing item:', item, p, products);
+        select2SetProduct($('#add-product_id'), p);
+        // Populate form with item data
+        $('#add-product_id').val(item.product_id).trigger('change');
+        $('#add-no_seri').val(item.no_seri);
+        $('#add-tanggal_expired').val(item.tanggal_expired);
+        $('#add-qty').val(item.qty);
+        $('#add-satuan').val(item.satuan);
+        $('#add-harga_satuan').val(item.harga_satuan);
+        $('#add-sisa_stok').val(item.sisa_stok);
+        $('#add-sub_total_sblm_disc').val(item.sub_total_sblm_disc);
+        $('#add-diskon_1_persen').val(item.diskon_1_persen);
+        $('#add-diskon_1_rupiah').val(item.diskon_1_rupiah);
+        $('#add-diskon_2_persen').val(item.diskon_2_persen);
+        $('#add-diskon_2_rupiah').val(item.diskon_2_rupiah);
+        $('#add-diskon_3_persen').val(item.diskon_3_persen);
+        $('#add-diskon_3_rupiah').val(item.diskon_3_rupiah);
+        $('#add-total_diskon_item').val(item.total_diskon_item);
+        $('#add-sub_total_sebelum_ppn').val(item.sub_total_sebelum_ppn);
+        $('#add-ppn_persen').val(item.ppn_persen);
+        $('#add-sub_total_setelah_disc').val(item.sub_total_setelah_disc);
+        $('#add-catatan').val(item.catatan);
+
+        // Remove the row from review table
+       // Remove the row from table
+            $tr.remove();
+            // Remove hidden inputs
+            $(`#hidden-inputs-container .item-hidden[data-index="${idx}"]`).remove();
+            // Update item index
+            itemIndex--;
+            // Update summary
+            updateSummary();
     });
 
     // Your kalkulasi/stock logic (adapted for single form)
@@ -295,9 +359,13 @@ $existingItems = old('items', isset($invoice) ? $invoice->items->toArray() : [])
     }
 
     $('#add-product_id, #add-lokasi_id').on('change', function() {
-        let data = $(this).select2('data')[0];
-        $('.satuan-box').text(data.satuan_kecil ? data.satuan_kecil.toUpperCase() : 'Satuan');
-        $('#add-satuan').val(data.satuan_kecil || '');
+       let data = $('#add-product_id').select2('data')[0] || {};
+  // fallback to option’s data-* attribute
+        let optDataSatuan = $('#add-product_id option:selected').data('satuan_kecil');
+        let satuanKecil = data.satuan_kecil || optDataSatuan || '';
+        $('.satuan-box').text(satuanKecil ? satuanKecil.toUpperCase() : 'Satuan');
+        $('#add-satuan').val(satuanKecil || '');
+        $('#add-qty').val(0); // Reset qty to 1 
         fetchStockData();
     });
 
@@ -317,7 +385,7 @@ $existingItems = old('items', isset($invoice) ? $invoice->items->toArray() : [])
     });
 
     // Kalkulasi logic for diskon, subtotal, etc (copy your logic, adapt selectors to #add-...)
-    $('#add-item-form').on('input', '.qty-input, .harga-input, .ppn-persen-input, .diskon-persentase-input, .diskon-rupiah-input', function(e) {
+    $('#add-item-form').on('input change', '.qty-input, .harga-input, .ppn-persen-input, .diskon-persentase-input, .diskon-rupiah-input, .select-product', function(e) {
         let qty = parseFloat($('#add-qty').val()) || 0;
         let harga = parseFloat($('#add-harga_satuan').val()) || 0;
         let diskonTotalPerQty = 0;
@@ -435,6 +503,7 @@ $existingItems = old('items', isset($invoice) ? $invoice->items->toArray() : [])
             };
         }
     }
+    
 });
 
 </script>

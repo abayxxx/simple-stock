@@ -86,7 +86,7 @@ class SalesReturnController extends Controller
     public function create()
     {
         $customers = CompanyProfile::orderBy('name')
-            ->where('relationship', 'customer')
+            ->where('relationship', '!=', 'supplier') // Only customers, not suppliers
             ->get();
         $salesGroups = SalesGroup::orderBy('nama')->get();
        
@@ -118,7 +118,7 @@ class SalesReturnController extends Controller
             'items.*.product_id' => 'required|integer|exists:products,id',
             'items.*.qty' => 'required|numeric|min:1',
             'items.*.no_seri' => 'nullable|string|max:50',
-            'items.*.tanggal_expired' => 'nullable|date',
+            'items.*.tanggal_expired' => 'nullable|string',
             'items.*.satuan' => 'nullable|string|max:20',
             'items.*.harga_satuan' => 'required|numeric',
             'items.*.diskon_1_persen' => 'nullable|numeric|min:0',
@@ -189,7 +189,7 @@ class SalesReturnController extends Controller
     public function edit(SalesReturn $return)
     {
         $customers = CompanyProfile::orderBy('name')
-            ->where('relationship', 'customer')
+            ->where('relationship', '!=','supplier')
             ->get();
         $salesGroups = SalesGroup::orderBy('nama')->get();
         // load only products in purchases invoice
@@ -221,7 +221,7 @@ class SalesReturnController extends Controller
             'items.*.product_id' => 'required|integer|exists:products,id',
             'items.*.qty' => 'required|numeric|min:1',
             'items.*.no_seri' => 'nullable|string|max:50',
-            'items.*.tanggal_expired' => 'nullable|date',
+            'items.*.tanggal_expired' => 'nullable|string',
             'items.*.satuan' => 'nullable|string|max:20',
             'items.*.harga_satuan' => 'required|numeric',
             'items.*.diskon_1_persen' => 'nullable|numeric|min:0',
@@ -394,7 +394,10 @@ class SalesReturnController extends Controller
             'products' => $filteredProducts->map(fn($p) => [
                 'id' => $p->id,
                 'text' => $p->kode . ' - ' . $p->nama,
+                'kode' => $p->kode,
+                'nama' => $p->nama,
                 'satuan' => $p->satuan_kecil,
+                'sisa_stok' => self::getSisaStokBatch($p->id),
             ])->values(),
         ]);
     }
@@ -424,6 +427,7 @@ class SalesReturnController extends Controller
                     'ppn_persen' => $item->ppn_persen,
                     'sub_total_setelah_disc' => $item->sub_total_setelah_disc,
                     'catatan' => $item->catatan,
+                    'sisa_stok' => self::getSisaStokBatch($item->product_id, $item->no_seri, $item->tanggal_expired),
                 ];
             }),
         ]);

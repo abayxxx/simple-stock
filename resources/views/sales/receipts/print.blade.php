@@ -159,7 +159,7 @@
                     <td class="text-center">
                         {{ $item->invoice->tanggal ? \Carbon\Carbon::parse($item->invoice->tanggal)->format('d M Y') : '-' }}
                     </td>
-                    <td class="text-right">Rp. {{ number_format($item->total_faktur - $item->total_retur,0,',','.') }}</td>
+                    <td class="text-right">Rp. {{ number_format($item->sisa_tagihan,0,',','.') }}</td>
                     <td>{{ $item->keterangan }}</td>
                 </tr>
                 @php
@@ -170,14 +170,14 @@
 
                 <tr>
                     <th colspan="3" class="text-right big-total">GRAND TOTAL</th>
-                    <th colspan="1" class="text-right big-total">Rp. {{ number_format($totalFaktur-$totalRetur,0,',','.') }}</th>
+                    <th colspan="1" class="text-right big-total">Rp. {{ number_format($receipt->receiptItems->sum('sisa_tagihan'), 2, ',', '.') }}</th>
                     <th></th>
                 </tr>
             </tbody>
         </table>
         <div class="terbilang-box">
             <b>Terbilang:</b>
-            {{ ucfirst(terbilang($totalFaktur-$totalRetur)) }} Rupiah.
+            {{ ucfirst(terbilang($receipt->receiptItems->sum('sisa_tagihan'))) }} Rupiah.
         </div>
         <table class="tt-footer-table" width="100%">
             <tr>

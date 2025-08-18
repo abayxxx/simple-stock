@@ -34,7 +34,7 @@
 
     <div class="col-md-2">
         <label>Tanggal</label>
-        <input name="tanggal" type="date" value="{{ old('tanggal', $invoice->tanggal ?? date('Y-m-d')) }}" class="form-control @error('tanggal') is-invalid @enderror" required>
+        <input name="tanggal" type="date" id="tanggal" value="{{ old('tanggal', $invoice->tanggal ?? date('Y-m-d')) }}" class="form-control @error('tanggal') is-invalid @enderror" required>
         @error('tanggal') <div class="invalid-feedback">{{ $message }}</div> @enderror
     </div>
     <div class="col-md-3">
@@ -74,7 +74,7 @@
 <div class="row mb-3">
     <div class="col-md-2">
         <label>Term</label>
-        <input name="term" class="form-control" value="{{ old('term', $invoice->term ?? '') }}">
+        <input name="term" class="form-control" id="term" value="{{ old('term', $invoice->term ?? '') }}">
     </div>
     <div class="col-md-2">
         <label>Status</label>
@@ -89,7 +89,7 @@
     </div>
     <div class="col-md-3">
         <label>Jatuh Tempo</label>
-        <input name="jatuh_tempo" type="date" class="form-control" value="{{ old('jatuh_tempo', $invoice->jatuh_tempo ?? '') }}">
+        <input name="jatuh_tempo" type="date" id="jatuh_tempo" class="form-control" value="{{ old('jatuh_tempo', $invoice->jatuh_tempo ?? '') }}">
     </div>
     <div class="col-md-3">
         <label>Catatan</label>
@@ -174,6 +174,36 @@
 
 // Panggil pertama kali
     updateSummary();
+
+    // If term is set, update jatuh_tempo
+    $('#term').on('input change', function() {
+        let term = parseInt($(this).val());
+        console.log('Term changed:', term);
+        if (!isNaN(term) && term > 0) {
+            let tanggal = $('#tanggal').val();
+            console.log('Tanggal:', tanggal);
+            if (tanggal) {
+                console.log('Term:', term, 'Tanggal:', tanggal);
+                let jatuhTempo = new Date(tanggal);
+                jatuhTempo.setDate(jatuhTempo.getDate() + term);
+                $('#jatuh_tempo').val(jatuhTempo.toISOString().split('T')[0]);
+            }
+        } else {
+            $('#jatuh_tempo').val('');
+        }
+    });
+
+    // if jatuh_tempo is set, update term
+    $('#jatuh_tempo').on('change input', function() {
+        let jatuhTempo = $(this).val();
+        let tanggal = $('#tanggal').val();
+        if (jatuhTempo && tanggal) {
+            let term = Math.ceil((new Date(jatuhTempo) - new Date(tanggal)) / (1000 * 60 * 60 * 24));
+            $('#term').val(term);
+        } else {
+            $('#term').val('');
+        }
+    });
 
 </script>
 @endpush

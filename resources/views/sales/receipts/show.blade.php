@@ -42,6 +42,7 @@
                         <th>Tanggal</th>
                         <th>Total Faktur</th>
                         <th>Total Retur</th>
+                        <th>Sisa Tagihan</th>
                         <th>Catatan</th>
                     </tr>
                 </thead>
@@ -52,13 +53,19 @@
                         <td>{{ $item->invoice->tanggal ? tanggal_indo($item->invoice->tanggal) : '-' }}</td>
                         <td class="text-end">{{ number_format($item->total_faktur, 2, ',', '.') }}</td>
                         <td class="text-end">{{ number_format($item->total_retur, 2, ',', '.') }}</td>
+                        <td class="text-end">
+                            <input type="hidden" class="sisa-tagihan" name="items[{{ $loop->index }}][sisa_tagihan]" value="{{ $item->sisa_tagihan }}">
+                            {{ number_format($item->sisa_tagihan, 2, ',', '.') }}
+                        </td>
                         <td>{{ $item->catatan }}</td>
                     </tr>
                     @endforeach
 
                     <tr>
                         <th class="text-end" colspan="4">Total Diterima</th>
-                        <td class="text-end total-diterima" colspan="2">{{ number_format($receipt->total_faktur, 2, ',', '.') }}</td>
+                        <td class="text-end total-diterima" colspan="2">
+                        {{ number_format($receipt->receiptItems->sum('sisa_tagihan'), 2, ',', '.') }}
+                        </td>
                     </tr>
 
 

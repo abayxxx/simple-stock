@@ -16,6 +16,7 @@ $items = old('items', isset($receipt) ? $receipt->receiptItems->toArray() : []);
             <th>Jatuh Tempo</th>
             <th>Nilai Faktur</th>
             <th>Nilai Retur</th>
+            <th>Sisa Tagihan</th>
             <th>Catatan</th>
             <th></th>
         </tr>
@@ -100,6 +101,10 @@ function renderSelectedFaktur() {
                 <td>
                     <input type="hidden" class="total-retur" name="items[${idx}][total_retur]" value="${item.total_retur}">
                     ${Number(item.total_retur).toLocaleString('id-ID')}
+                </td>
+                <td>
+                    <input type="hidden" class="sisa-tagihan" name="items[${idx}][sisa_tagihan]" value="${item.sisa_tagihan}">
+                    ${Number(item.sisa_tagihan).toLocaleString('id-ID')}
                 </td>
                 <td>
                     <input name="items[${idx}][catatan]" class="form-control" value="">

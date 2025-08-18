@@ -90,7 +90,7 @@ class PurchasesInvoiceController extends Controller
     public function create()
     {
         $suppliers = CompanyProfile::orderBy('name')
-            ->where('relationship', 'supplier')
+            ->where('relationship', '!=', 'customer') // Ensure not a customer
             ->get();
         $branches = CompanyBranch::orderBy('name')->get();
         // Load products for dropdown
@@ -191,7 +191,7 @@ class PurchasesInvoiceController extends Controller
     public function edit(PurchasesInvoice $invoice)
     {
         $suppliers = CompanyProfile::orderBy('name')
-            ->where('relationship', 'supplier')
+            ->where('relationship', '!=', 'customer') // Ensure not a customer
             ->get();
         // load only products in purchases invoice
         $products = Product::whereIn('id', $invoice->items->pluck('product_id'))->orderBy('nama')->get();

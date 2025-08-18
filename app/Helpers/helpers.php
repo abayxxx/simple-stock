@@ -28,6 +28,14 @@ if (!function_exists('terbilang')) {
     {
         $angka = abs($angka);
         $baca = ["", "Satu", "Dua", "Tiga", "Empat", "Lima", "Enam", "Tujuh", "Delapan", "Sembilan", "Sepuluh", "Sebelas"];
+        if ($angka < 0) {
+            return "Minus " . terbilang(-$angka);
+        }
+        
+        if ($angka == 0) {
+            return "Nol";
+        }
+
         $terbilang = "";
         if ($angka < 12) {
             $terbilang = " " . $baca[$angka];

@@ -11,7 +11,7 @@
 <div class="alert alert-success">{{ session('success') }}</div>
 @endif
 <div class="mb-3">
-    <a href="{{ route('purchases.invoices.create') }}" class="btn btn-primary"><i class="fa fa-plus"></i> Tambah Tanda Terima</a>
+    <a href="{{ route('purchases.invoices.create') }}" class="btn btn-primary"><i class="fa fa-plus"></i> Tambah Pembelian</a>
 </div>
 <div class="card shadow">
     <div class="card-header">

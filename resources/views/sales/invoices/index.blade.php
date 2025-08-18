@@ -11,7 +11,7 @@
 <div class="alert alert-success">{{ session('success') }}</div>
 @endif
 <div class="mb-3">
-    <a href="{{ route('sales.invoices.create') }}" class="btn btn-primary"><i class="fa fa-plus"></i> Tambah Tanda Terima</a>
+    <a href="{{ route('sales.invoices.create') }}" class="btn btn-primary"><i class="fa fa-plus"></i> Tambah Penjualan</a>
     <a href="#" class="btn btn-success" id="export-btn" target="_blank">
         <i class="fa fa-file-excel"></i>
   Export Excel

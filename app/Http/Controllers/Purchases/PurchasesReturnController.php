@@ -78,7 +78,7 @@ class PurchasesReturnController extends Controller
     public function create()
     {
         $suppliers = CompanyProfile::orderBy('name')
-            ->where('relationship', 'supplier')
+            ->where('relationship', '!=', 'customer')
             ->get();
       
         $branches = CompanyBranch::orderBy('name')->get();
@@ -176,7 +176,7 @@ class PurchasesReturnController extends Controller
     public function edit(PurchasesReturn $return)
     {
         $suppliers = CompanyProfile::orderBy('name')
-            ->where('relationship', 'supplier')
+            ->where('relationship','!=','customer')
             ->get();
         $products = Product::whereIn('id', $return->items->pluck('product_id'))->orderBy('nama')->get();
         $branches = CompanyBranch::orderBy('name')->get();
@@ -380,7 +380,10 @@ class PurchasesReturnController extends Controller
             'products' => $filteredProducts->map(fn($p) => [
                 'id' => $p->id,
                 'text' => $p->kode . ' - ' . $p->nama,
+                'kode' => $p->kode,
+                'nama' => $p->nama,
                 'satuan' => $p->satuan_kecil,
+                'sisa_stok' => self::getSisaStokBatch($p->id),
             ])->values(),
         ]);
     }
@@ -410,6 +413,7 @@ class PurchasesReturnController extends Controller
                     'ppn_persen' => $item->ppn_persen,
                     'sub_total_setelah_disc' => $item->sub_total_setelah_disc,
                     'catatan' => $item->catatan,
+                    'sisa_stok' => self::getSisaStokBatch($item->product_id, $item->no_seri, $item->tanggal_expired),
                 ];
             }),
         ]);

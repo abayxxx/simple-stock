@@ -115,7 +115,6 @@
                 <th>Qty</th>
                 <th>Satuan</th>
                 <th>Harga</th>
-                <th>Sisa Stok</th>
                 <th>Subtotal Sblm Diskon</th>
                 <th>D1 (%)</th>
                 <th>D1 (Rp)</th>
@@ -128,7 +127,7 @@
                 <th>PPN (%)</th>
                 <th>Subtotal Stlh PPN</th>
                 <th>Catatan</th>
-                <th>Hapus</th>
+                <th>Action</th>
             </tr>
         </thead>
         <tbody></tbody>
@@ -140,6 +139,7 @@
 
 @push('js')
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="{{ asset('js/helper.js') }}"></script>
 <script>
 $(function() {
     let itemIndex = 0;
@@ -159,13 +159,12 @@ $(function() {
     function renderReviewRow(item, idx) {
          let produk = products[item.product_id] ? (products[item.product_id].kode + ' - ' + products[item.product_id].nama) : item.product_name;
         return `<tr data-index="${idx}">
-            <td style="white-space:nowrap">${produk}</td>
+            <td style="white-space:nowrap" data-product-id="${item.product_id}">${produk}</td>
             <td>${item.no_seri||''}</td>
             <td>${item.tanggal_expired||''}</td>
             <td>${item.qty||''}</td>
             <td>${(item.satuan||'').toUpperCase()}</td>
             <td>${item.harga_satuan||''}</td>
-            <td>${item.sisa_stok||''}</td>
             <td>${item.sub_total_sblm_disc||''}</td>
             <td>${item.diskon_1_persen||''}</td>
             <td>${item.diskon_1_rupiah||''}</td>
@@ -178,7 +177,10 @@ $(function() {
             <td>${item.ppn_persen||''}</td>
             <td>${item.sub_total_setelah_disc||''}</td>
             <td>${item.catatan||''}</td>
-            <td><button type="button" class="btn btn-danger btn-sm btn-remove-item"><i class="fa fa-trash"></i> Hapus</button></td>
+            <td class="">
+            <button type="button" class="btn btn-danger btn-sm btn-remove-item"><i class="fa fa-trash"></i> </button>
+            <button type="button" class="btn btn-primary btn-sm btn-edit-item"><i class="fa fa-edit"></i> </button>
+            </td>
         </tr>`;
     }
 
@@ -219,6 +221,12 @@ $(function() {
                     },
                     processResults: function(data) {
                         // Server should return: {products: [{id, text, satuan}]}
+                         products = data.products || [];
+                        // collect by id for easy access
+                        products = products.reduce((acc, p) => {
+                            acc[p.id] = p;
+                            return acc;
+                        }, {});
                         return {
                             results: (data.products || []).map(function(prod) {
                                 return {
@@ -282,11 +290,11 @@ $(function() {
     });
 
     // --- Batch/seri/expired change: auto fill harga/diskon/qty if needed
-    $('#add-no_seri, #add-tanggal_expired').on('change', function() {
+    $('#add-no_seri, #add-tanggal_expired,#add-product_id').on('change', function() {
         let productId = $('#add-product_id').val();
         let invoiceId = $('#select-purchases-invoice').val();
-        let noSeri = $('#add-no_seri').val();
-        let expired = $('#add-tanggal_expired').val();
+        let noSeri = $('#add-no_seri').val() || null;
+        let expired = $('#add-tanggal_expired').val() || null;
         $.get("/admin/purchases/returns/invoice-product-options/" + invoiceId + "/" + productId, function(res) {
             let batch = (res.batches || []).find(b =>
                 b.no_seri == noSeri && b.tanggal_expired == expired
@@ -396,6 +404,8 @@ $(function() {
         // Clear add form
         $('#add-item-form input, #add-item-form select, #add-item-form textarea').val('');
         $('#add-satuan').val('');
+        $('#add-no_seri').html('<option value="">-- Pilih No Seri --</option>');
+        $('#add-tanggal_expired').html('<option value="">-- Pilih Expired --</option>');
         $('.satuan-box').text('Satuan');
         updateSummary();
     });
@@ -408,6 +418,66 @@ $(function() {
         $(`#hidden-inputs-container .item-hidden[data-index="${idx}"]`).remove();
         updateSummary();
     });
+
+    // Edit item
+        $('#review-items-table').on('click', '.btn-edit-item', function() {
+
+            let $tr = $(this).closest('tr');
+            let idx = $tr.data('index');
+            let item = {
+                product_id: $tr.find('td:eq(0)').data('product-id'),
+                no_seri: $tr.find('td:eq(1)').text(),
+                tanggal_expired: $tr.find('td:eq(2)').text(),
+                qty: $tr.find('td:eq(3)').text(),
+                satuan: $tr.find('td:eq(4)').text(),
+                harga_satuan: $tr.find('td:eq(5)').text(),
+                sub_total_sblm_disc: $tr.find('td:eq(6)').text(),
+                diskon_1_persen: $tr.find('td:eq(7)').text(),
+                diskon_1_rupiah: $tr.find('td:eq(8)').text(),
+                diskon_2_persen: $tr.find('td:eq(9)').text(),
+                diskon_2_rupiah: $tr.find('td:eq(10)').text(),
+                diskon_3_persen: $tr.find('td:eq(11)').text(),
+                diskon_3_rupiah: $tr.find('td:eq(12)').text(),
+                total_diskon_item: $tr.find('td:eq(13)').text(),
+                sub_total_sebelum_ppn: $tr.find('td:eq(14)').text(),
+                ppn_persen: $tr.find('td:eq(15)').text(),
+                sub_total_setelah_disc: $tr.find('td:eq(16)').text(),
+                catatan: $tr.find('td:eq(17)').text()
+            };
+
+            // Prefill Select2 correctly
+            const p = products[item.product_id] || { id: item.product_id, kode: '', nama: item.product_name || '', satuan_kecil: '' };
+            console.log('Editing item:', item, p, products);
+            select2SetProduct($('#add-product_id'), p);
+            // Fill form with item data
+            $('#add-no_seri').val(item.no_seri).trigger('change');
+            $('#add-tanggal_expired').val(item.tanggal_expired).trigger('change');
+            $('#add-qty').val(item.qty).trigger('input');
+            $('#add-satuan').val(item.satuan);
+            $('.satuan-box').text(item.satuan ? item.satuan.toUpperCase() : 'Satuan');
+            $('#add-harga_satuan').val(item.harga_satuan).trigger('input');
+            $('#add-sisa_stok').val(item.sisa_stok).trigger('input');
+            $('#add-sub_total_sblm_disc').val(item.sub_total_sblm_disc).trigger('input');
+            $('#add-diskon_1_persen').val(item.diskon_1_persen).trigger('input');
+            $('#add-diskon_1_rupiah').val(item.diskon_1_rupiah).trigger('input');
+            $('#add-diskon_2_persen').val(item.diskon_2_persen).trigger('input');
+            $('#add-diskon_2_rupiah').val(item.diskon_2_rupiah).trigger('input');
+            $('#add-diskon_3_persen').val(item.diskon_3_persen).trigger('input');
+            $('#add-diskon_3_rupiah').val(item.diskon_3_rupiah).trigger('input');
+            $('#add-total_diskon_item').val(item.total_diskon_item).trigger('input');
+            $('#add-sub_total_sebelum_ppn').val(item.sub_total_sebelum_ppn).trigger('input');
+            $('#add-ppn_persen').val(item.ppn_persen).trigger('input');
+            $('#add-sub_total_setelah_disc').val(item.sub_total_setelah_disc).trigger('input');
+            $('#add-catatan').val(item.catatan);
+            // Remove the row from table
+            $tr.remove();
+            // Remove hidden inputs
+            $(`#hidden-inputs-container .item-hidden[data-index="${idx}"]`).remove();
+            // Update item index
+            itemIndex--;
+            // Update summary
+            updateSummary();
+        });
 
     // --- Block form submit if no item
     $('form').on('submit', function(e) {
@@ -472,6 +542,20 @@ $(function() {
 @push('css')
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <style>
+     #review-items-table {
+        min-width: 1600px;
+    }
+
+    #review-items-table th,
+    #review-items-table td {
+        white-space: nowrap;
+    }
+
+    @media (max-width: 992px) {
+        #review-items-table {
+            font-size: 13px;
+        }
+    }
 
     /* Match Select2 single select to Bootstrap 4/5 .form-control */
     .select2-container--default .select2-selection--single {

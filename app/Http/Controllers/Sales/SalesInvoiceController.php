@@ -114,7 +114,7 @@ class SalesInvoiceController extends Controller
     public function create()
     {
         $customers = CompanyProfile::orderBy('name')
-        ->where('relationship', 'customer')
+        ->where('relationship', '!=', 'supplier') // Ensure not a supplier
         ->get();
         $salesGroups = SalesGroup::orderBy('nama')->get();
        
@@ -152,7 +152,7 @@ class SalesInvoiceController extends Controller
             'items.*.satuan' => 'nullable|string|max:20',
             'items.*.harga_satuan' => 'required|numeric|min:0',
             'items.*.no_seri' => 'nullable|string|max:50',
-            'items.*.tanggal_expired' => 'nullable|date',
+            'items.*.tanggal_expired' => 'nullable|string',
 
             'items.*.diskon_1_persen' => 'nullable|numeric|min:0',
             'items.*.diskon_1_rupiah' => 'nullable|numeric|min:0',
@@ -239,7 +239,7 @@ class SalesInvoiceController extends Controller
         }
 
         $customers = CompanyProfile::orderBy('name')
-            ->where('relationship', 'customer')
+        ->where('relationship', '!=', 'supplier') // Ensure not a supplier
             ->get();
         $salesGroups = SalesGroup::orderBy('nama')->get();
         // load only products in purchases invoice
@@ -280,7 +280,7 @@ class SalesInvoiceController extends Controller
             'items.*.satuan' => 'nullable|string|max:20',
             'items.*.harga_satuan' => 'required|numeric|min:0',
             'items.*.no_seri' => 'nullable|string|max:50',
-            'items.*.tanggal_expired' => 'nullable|date',
+            'items.*.tanggal_expired' => 'nullable|string',
 
             'items.*.diskon_1_persen' => 'nullable|numeric|min:0',
             'items.*.diskon_1_rupiah' => 'nullable|numeric|min:0',
