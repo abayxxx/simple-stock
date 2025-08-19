@@ -59,7 +59,7 @@ class StockCardController extends Controller
             $total_masuk += $masuk;
             $total_keluar += $keluar;
 
-            $code = extractDocumentCodes($r->catatan, ['RT', 'SI', 'PI']);
+            $code = extractDocumentCodes($r->catatan, ['RT', 'HR', 'PI']);
 
             // get nama customer/supplier dari code dokumen
             $nama_customer_supplier = 'Tidak ada Nama';
@@ -76,7 +76,7 @@ class StockCardController extends Controller
                             SalesReturn::where('kode', $docCode)->first()
                         )->customer()->value('name') ?? 'Tidak ada Nama';
                     }
-                } elseif (str_starts_with($docCode, 'SI')) {
+                } elseif (str_starts_with($docCode, 'HR')) {
                     $nama_customer_supplier = optional(
                         SalesInvoice::where('kode', $docCode)->first()
                     )->customer()->value('name') ?? 'Tidak ada Nama';

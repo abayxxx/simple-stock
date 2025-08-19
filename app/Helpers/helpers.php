@@ -98,15 +98,20 @@ if (!function_exists('extractDocumentCodes')) {
      */
     function extractDocumentCodes(string $text, array $prefixes = null): array
     {
+        // Optional extra segment like ".25"
+        $optionalTail = '(?:\.\d{2})?'; // change \d{2} to \d+ if the length varies
+
         if ($prefixes && count($prefixes) > 0) {
-            // Gabungkan semua prefix jadi 1 pola regex
-            $pattern = '/(?:' . implode('|', array_map('preg_quote', $prefixes)) . ')\.\d{4}\.\d{5}/';
+            // Join prefixes safely; add word boundary before the prefix
+            $escaped = array_map(fn($p) => preg_quote($p, '/'), $prefixes);
+            $pattern = '/\b(?:' . implode('|', $escaped) . ')\.\d{4}\.\d{5}' . $optionalTail . '/';
         } else {
-            // Tanpa filter prefix → semua huruf kapital 2 huruf
-            $pattern = '/[A-Z]{2}\.\d{4}\.\d{5}/';
+            // Default: two capital letters as prefix
+            $pattern = '/\b[A-Z]{2}\.\d{4}\.\d{5}' . $optionalTail . '/';
         }
 
         preg_match_all($pattern, $text, $matches);
+
         return $matches[0] ?? [];
     }
 }
