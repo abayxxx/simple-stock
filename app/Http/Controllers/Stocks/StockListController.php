@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers\Stocks;
 
+use App\Exports\StockListExport;
 use Illuminate\Http\Request;
 use App\Models\Product;
 use App\Models\Stock;
 use Yajra\DataTables\Facades\DataTables;
 use App\Http\Controllers\Controller;
-
+use Maatwebsite\Excel\Facades\Excel;
 
 class StockListController extends Controller
 {
@@ -51,5 +52,16 @@ class StockListController extends Controller
                 return $sisa . ' ' . strtoupper($r->satuan_kecil);
             })
             ->make(true);
+    }
+
+    public function export(Request $request)
+    {
+        $awal  = $request->input('periode_awal');   // 'YYYY-MM-DD'
+        $akhir = $request->input('periode_akhir');  // 'YYYY-MM-DD'
+
+        return Excel::download(
+            new StockListExport($awal, $akhir),
+            'daftar_stok.xlsx'
+        );
     }
 }

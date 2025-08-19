@@ -7,35 +7,46 @@
 @section('content')
 <div class="card mb-4">
     <div class="card-body">
-        <form id="filter-form" class="row g-2 align-items-end">
-            <div class="col-md-3">
-                <label>Produk</label>
-                <select id="select-product" name="product_id" class="form-control">
-                    <option value="">-- Pilih Produk --</option>
+        <form id="filter-form" >
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3 col-12 ">
+                    <label class="form-label">Produk</label>
+                    <select id="select-product" name="product_id" class="form-control">
+                        <option value="">-- Pilih Produk --</option>
 
-                </select>
+                    </select>
+                </div>
+
+                <div class="col-md-2 col-12 ">
+                    <label class="form-label">Mulai</label>
+                    <input type="date" id="periode_awal" name="periode_awal" class="form-control" value="{{ date('Y-m-01') }}">
+                </div>
+                <div class="col-md-2 col-12 ">
+                    <label class="form-label">Sampai</label>
+                    <input type="date" id="periode_akhir" name="periode_akhir" class="form-control" value="{{ date('Y-m-d') }}">
+                </div>
+                <div class="col-md-1 col-12 d-grid">
+                    <button type="button" id="btn-refresh" class="btn btn-primary"> REFRESH</button>
+                </div>
+               <div class="ml-2 row g-2 align-items-end">
+            <div class="mr-2">
+                    <a href="#" class="btn btn-success" id="export-btn" target="_blank">
+                        <i class="fa fa-file-excel"></i>
+                        Export Excel
+                    </a>
+                </div>
+            <div class="">
+                    <a href="#" class="btn btn-danger" id="export-pdf-btn" target="_blank">
+                        <i class="fa fa-file-pdf"></i>
+                        Export PDF
+                    </a>
+                </div>
             </div>
-            <!-- <div class="col-md-2">
-                <label>Lokasi</label>
-                <select id="select-branch" name="lokasi_id" class="form-control">
-                    <option value="">-- Semua Lokasi --</option>
-                    @foreach($branches as $b)
-                    <option value="{{ $b->id }}">{{ $b->name }}</option>
-                    @endforeach
-                </select>
-            </div> -->
-            <div class="col-md-2">
-                <label>Mulai</label>
-                <input type="date" id="periode_awal" name="periode_awal" class="form-control" value="{{ date('Y-m-01') }}">
-            </div>
-            <div class="col-md-2">
-                <label>Sampai</label>
-                <input type="date" id="periode_akhir" name="periode_akhir" class="form-control" value="{{ date('Y-m-d') }}">
-            </div>
-            <div class="col-md-2">
-                <button type="button" id="btn-refresh" class="btn btn-primary"><i class="fa fa-refresh"></i> REFRESH</button>
+        </div>
             </div>
         </form>
+
+       
     </div>
 </div>
 
@@ -52,7 +63,7 @@
             <thead>
                 <tr>
                     <th>Tanggal</th>
-                    <th>Transaksi Dari</th>
+                    <th>Tipe Stok</th>
                     <th>No Transaksi</th>
                     <th>Nama</th>
                     <th>Masuk</th>
@@ -129,6 +140,31 @@
                     };
                 }
             }
+        });
+
+        function buildExportUrl() {
+            let periodeAwal = $('#periode_awal').val();
+            let periodeAkhir = $('#periode_akhir').val();
+            let productId = $('#select-product').val();
+
+
+            return "{{ route('stocks.cards.export') }}" + "?periode_awal=" + periodeAwal + "&periode_akhir=" + periodeAkhir + "&product_id=" + productId;
+        }
+        $('#export-btn').attr('href', buildExportUrl());
+        $('#periode_awal, #periode_akhir, #select-product').on('input change', function() {
+            $('#export-btn').attr('href', buildExportUrl());
+        });
+
+        function buildExportPdfUrl() {
+            let periodeAwal = $('#periode_awal').val();
+            let periodeAkhir = $('#periode_akhir').val();
+            let productId = $('#select-product').val();
+
+            return "{{ route('stocks.cards.exportPdf') }}" + "?periode_awal=" + periodeAwal + "&periode_akhir=" + periodeAkhir + "&product_id=" + productId;
+        }
+        $('#export-pdf-btn').attr('href', buildExportPdfUrl());
+        $('#periode_awal, #periode_akhir, #select-product').on('change', function() {
+            $('#export-pdf-btn').attr('href', buildExportPdfUrl());
         });
     });
 </script>

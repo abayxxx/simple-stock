@@ -6,6 +6,14 @@
 @section('content')
 <div class="mb-3">
     <a href="{{ route('sales.receipts.create') }}" class="btn btn-primary"><i class="fa fa-plus"></i> Tambah Tanda Terima</a>
+        <a href="#" class="btn btn-success" id="export-btn" target="_blank">
+        <i class="fa fa-file-excel"></i>
+  Export Excel
+</a>
+<a href="#" class="btn btn-danger" id="export-pdf-btn" target="_blank">
+    <i class="fa fa-file-pdf"></i>
+    Export PDF
+</a>
 </div>
 <div class="card">
     <div class="card-header">
@@ -145,12 +153,38 @@
 
 
         // reload table when any dropdown changes
-        $('#filter_customer, #filter_kolektor').on('change', function() {
+        $('#filter_customer, #filter_collector').on('change', function() {
             $('#receipts-table').DataTable().ajax.reload();
         });
 
         // optional: first load (if you want them empty until dates picked, you can skip this)
         loadFilterOptions();
+         function buildExportUrl() {
+            let periodeAwal = $('#periode_awal').val();
+            let periodeAkhir = $('#periode_akhir').val();
+            
+            let customer =  $('#filter_customer').val();
+            let collector = $('#filter_collector').val();
+            return "{{ route('sales.receipts.export') }}" + "?periode_awal=" + periodeAwal + "&periode_akhir=" + periodeAkhir + "&customer_id=" + customer + "&collector_id=" + collector;
+        }
+        $('#export-btn').attr('href', buildExportUrl());
+        $('#periode_awal, #periode_akhir, #filter_customer, #filter_collector').on('change', function() {
+            $('#export-btn').attr('href', buildExportUrl());
+        });
+
+        // PDF export
+        function buildExportPdfUrl() {
+            let periodeAwal = $('#periode_awal').val();
+            let periodeAkhir = $('#periode_akhir').val();
+            
+            let customer =  $('#filter_customer').val();
+            let collector = $('#filter_collector').val();
+            return "{{ route('sales.receipts.exportPdf') }}" + "?periode_awal=" + periodeAwal + "&periode_akhir=" + periodeAkhir + "&customer_id=" + customer + "&collector_id=" + collector;
+        }
+        $('#export-pdf-btn').attr('href', buildExportPdfUrl());
+        $('#periode_awal, #periode_akhir, #filter_customer, #filter_collector').on('change', function() {
+            $('#export-pdf-btn').attr('href', buildExportPdfUrl());
+        });
     });
 </script>
 @endpush

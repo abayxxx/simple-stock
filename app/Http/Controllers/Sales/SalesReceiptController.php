@@ -4,6 +4,7 @@
 
 namespace App\Http\Controllers\Sales;
 
+use App\Exports\SalesReceiptsExport;
 use App\Http\Controllers\Controller;
 use App\Models\SalesReceipt;
 use App\Models\SalesReceiptItem;
@@ -11,8 +12,10 @@ use App\Models\SalesInvoice;
 use App\Models\CompanyProfile;
 use App\Models\Employee;
 use App\Models\EmployeProfile;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
 use Yajra\DataTables\Facades\DataTables;
 
 class SalesReceiptController extends Controller
@@ -83,7 +86,7 @@ class SalesReceiptController extends Controller
     public function create()
     {
         $customers = CompanyProfile::orderBy('name')
-            ->where('relationship', 'customer')
+            ->where('relationship', '!=', 'supplier') // Hanya customer
             ->get();
         $employees = EmployeProfile::orderBy('nama')->get();
 
@@ -155,7 +158,7 @@ class SalesReceiptController extends Controller
 
 
                 // Update SalesReceipt total_faktur and total_retur
-                $receipt->total_faktur += $item['total_faktur'];
+                $receipt->total_faktur += $item['sisa_tagihan'];
                 $receipt->total_retur += $item['total_retur'] ?? 0;
             }
 
@@ -167,10 +170,10 @@ class SalesReceiptController extends Controller
 
     protected static function generateKode()
     {
-        $prefix = 'SRc.' . date('ym') . '.';
+        $prefix = 'HR.' . date('ym') . '.';
         $last = SalesReceipt::where('kode', 'like', $prefix . '%')->max('kode');
-        $urut = $last ? (int)substr($last, 9) + 1 : 1;
-        return $prefix . str_pad($urut, 5, '0', STR_PAD_LEFT);
+        $urut = $last ? (int)substr($last, 8) + 1 : 1;
+        return $prefix . str_pad($urut, 5, '0', STR_PAD_LEFT) . '.' . date('Y');
     }
 
     public function show(SalesReceipt $receipt)
@@ -183,7 +186,7 @@ class SalesReceiptController extends Controller
     {
         $receipt->load('customer', 'collector', 'receiptItems.invoice');
         $customers = CompanyProfile::orderBy('name')
-            ->where('relationship', 'customer')
+            ->where('relationship', '!=', 'supplier')
             ->get();
         $employees = EmployeProfile::orderBy('nama')->get();
 
@@ -237,7 +240,7 @@ class SalesReceiptController extends Controller
             foreach ($data['items'] as $item) {
                 $receipt->receiptItems()->create($item);
                 // Update total faktur dan retur
-                $receipt->total_faktur += $item['total_faktur'];
+                $receipt->total_faktur += $item['sisa_tagihan'];
                 $receipt->total_retur += $item['total_retur'] ?? 0;
             }
 
@@ -304,5 +307,60 @@ class SalesReceiptController extends Controller
             'customers' => $customers,
             'collectors' => $collectors,
         ]);
+    }
+
+   public function export(Request $request)
+    {
+        $awal        = $request->input('periode_awal');
+        $akhir       = $request->input('periode_akhir');
+        $customerId  = $request->input('customer_id');
+        $collectorId = $request->input('collector_id');
+
+        // Download with our columns
+        return Excel::download(
+            new SalesReceiptsExport($awal, $akhir, $customerId, $collectorId),
+            'daftar_tanda_terima_penjualan.xlsx'
+        );
+    }
+
+    public function exportPdf(Request $request)
+    {
+        $awal        = $request->input('periode_awal');
+        $akhir       = $request->input('periode_akhir');
+        $customerId  = $request->input('customer_id');
+        $collectorId = $request->input('collector_id');
+
+        // Query: ONLY the fields we need
+        $rows = DB::table('sales_receipts as sr')
+            ->leftJoin('company_profiles as cp', 'cp.id', '=', 'sr.company_profile_id')
+            ->leftJoin('employe_profiles as ep', 'ep.id', '=', 'sr.employee_id') // table/col per your code
+            ->leftJoin('sales_receipt_items as sri', 'sri.sales_receipt_id', '=', 'sr.id')
+            ->when($awal && $akhir, fn($q) => $q->whereBetween('sr.tanggal', [$awal.' 00:00:00', $akhir.' 23:59:59']))
+            ->when($customerId,  fn($q) => $q->where('sr.company_profile_id', $customerId))
+            ->when($collectorId, fn($q) => $q->where('sr.employee_id',      $collectorId))
+            ->groupBy('sr.id', 'sr.tanggal', 'sr.kode', 'cp.name', 'ep.nama', 'sr.total_faktur', 'sr.total_retur')
+            ->orderBy('sr.tanggal')
+            ->get([
+                'sr.tanggal',
+                'sr.kode',
+                DB::raw('COALESCE(cp.name, "-")  as customer_name'),
+                DB::raw('COALESCE(ep.nama, "-")  as collector_name'),
+                DB::raw('COUNT(sri.id)           as jml_faktur'),
+                DB::raw('sr.total_faktur as grand_total'),
+            ]);
+
+        $periodeText = ($awal && $akhir)
+            ? date('d M Y', strtotime($awal)).' s/d '.date('d M Y', strtotime($akhir))
+            : '-';
+
+        $total = $rows->sum('grand_total');
+
+        $pdf = Pdf::loadView('sales.receipts.export_pdf', [
+            'rows'        => $rows,
+            'periodeText' => $periodeText,
+            'total'       => $total,
+        ])->setPaper('a4', 'portrait'); // change to 'landscape' if you prefer
+
+        return $pdf->download('daftar_tanda_terima_penjualan.pdf');
     }
 }

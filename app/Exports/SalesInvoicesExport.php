@@ -45,6 +45,9 @@ class SalesInvoicesExport implements
                 DB::raw('COALESCE(sg.nama, "-") as sales_name'),
                 'si.jatuh_tempo',
                 'si.grand_total',
+                'si.total_retur',
+                'si.total_bayar',
+                'si.sisa_tagihan',
             ])
             ->orderBy('si.tanggal');
 
@@ -60,7 +63,7 @@ class SalesInvoicesExport implements
 
     public function headings(): array
     {
-        return ['Tanggal', 'No. Faktur', 'Nama Customer', 'Sales', 'Jatuh Tempo', 'Grand Total'];
+        return ['Tanggal', 'No. Faktur', 'Nama Customer', 'Sales', 'Jatuh Tempo', 'Grand Total', 'Total Retur', 'Total Bayar', 'Sisa Tagihan'];
     }
 
     public function map($r): array
@@ -73,13 +76,16 @@ class SalesInvoicesExport implements
             $r->sales_name,
             $r->jatuh_tempo ? date('d M Y', strtotime($r->jatuh_tempo)) : '-',
             (float) $r->grand_total,
+            (float) $r->total_retur,
+            (float) $r->total_bayar,
+            (float) $r->sisa_tagihan,
         ];
     }
 
     /** Fixed widths (cheaper than autosize) */
     public function columnWidths(): array
     {
-        return ['A' => 14, 'B' => 22, 'C' => 35, 'D' => 12, 'E' => 14, 'F' => 16];
+        return ['A' => 14, 'B' => 22, 'C' => 35, 'D' => 12, 'E' => 14, 'F' => 16, 'G' => 16, 'H' => 16, 'I' => 16];
     }
 
     public function registerEvents(): array
@@ -106,30 +112,33 @@ class SalesInvoicesExport implements
                 $sheet->mergeCells('A3:F3');
 
                 // Headings border/bold
-                $sheet->getStyle('A6:F6')->getFont()->setBold(true);
-                $sheet->getStyle('A6:F6')->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+                $sheet->getStyle('A6:I6')->getFont()->setBold(true);
+                $sheet->getStyle('A6:I6')->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
 
                 // Only style the **actual data range**, not whole columns
                 $lastRow = $sheet->getHighestRow();
                 if ($lastRow >= 7) {
                     // Borders around data
-                    $sheet->getStyle("A7:F{$lastRow}")
+                    $sheet->getStyle("A7:I{$lastRow}")
                           ->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
 
                     // Formats just for the data rows
                     $sheet->getStyle("A7:A{$lastRow}")->getNumberFormat()->setFormatCode('dd mmm yyyy');
                     $sheet->getStyle("E7:E{$lastRow}")->getNumberFormat()->setFormatCode('dd mmm yyyy');
                     $sheet->getStyle("F7:F{$lastRow}")->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1);
+                    $sheet->getStyle("G7:G{$lastRow}")->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1);
+                    $sheet->getStyle("H7:H{$lastRow}")->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1);
+                    $sheet->getStyle("I7:I{$lastRow}")->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1);
                 }
 
                 // Total row (no pre-calc needed—SUM is fine even with pre-calc off)
                 $totalRow = $lastRow + 1;
-                $sheet->setCellValue("E{$totalRow}", 'TOTAL PENJUALAN');
-                $sheet->getStyle("E{$totalRow}")->getFont()->setBold(true);
-                $sheet->setCellValue("F{$totalRow}", "=SUM(F7:F{$lastRow})");
-                $sheet->getStyle("F{$totalRow}")
+                $sheet->setCellValue("H{$totalRow}", 'TOTAL PENJUALAN');
+                $sheet->getStyle("H{$totalRow}")->getFont()->setBold(true);
+                $sheet->setCellValue("I{$totalRow}", "=SUM(I7:I{$lastRow})");
+                $sheet->getStyle("I{$totalRow}")
                       ->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_NUMBER_COMMA_SEPARATED1);
-                $sheet->getStyle("E{$totalRow}:F{$totalRow}")
+                $sheet->getStyle("H{$totalRow}:I{$totalRow}")
                       ->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
             },
         ];

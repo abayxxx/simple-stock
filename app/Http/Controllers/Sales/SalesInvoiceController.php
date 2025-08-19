@@ -488,6 +488,9 @@ class SalesInvoiceController extends Controller
                 DB::raw('COALESCE(sg.nama, "-") as sales_name'),
                 'si.jatuh_tempo',
                 'si.grand_total',
+                'si.total_retur',
+                'si.total_bayar',
+                'si.sisa_tagihan',
             ])
             ->when($awal && $akhir, fn($qq) => $qq->whereBetween('si.tanggal', [$awal.' 00:00:00', $akhir.' 23:59:59']))
             ->when($customerId, fn($qq) => $qq->where('si.company_profile_id', $customerId))
@@ -502,13 +505,13 @@ class SalesInvoiceController extends Controller
             ? date('d M Y', strtotime($awal)) . ' s/d ' . date('d M Y', strtotime($akhir))
             : '-';
 
-        $total = $rows->sum('grand_total');
+        $total = $rows->sum('sisa_tagihan') ?? 0;
 
         $pdf = Pdf::loadView('sales.invoices.export_pdf', [
             'rows'        => $rows,
             'periodeText' => $periodeText,  
             'total'       => $total,
-        ])->setPaper('a4', 'portrait'); // or 'landscape'
+        ])->setPaper('a4', 'landscape'); // or 'landscape'
 
         // ->download() to force download, or ->stream() to preview in browser
         return $pdf->download('daftar_faktur_penjualan.pdf');

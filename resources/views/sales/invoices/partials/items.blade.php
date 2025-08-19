@@ -50,7 +50,7 @@ $existingItems = old('items', isset($invoice) ? $invoice->items->toArray() : [])
         </div>
         <div class="col-md-3 mb-2">
             <label>Subtotal Sebelum Diskon</label>
-            <input id="add-sub_total_sblm_disc" type="number"
+            <input id="add-sub_total_sblm_disc" type="text"
                 class="form-control sub-total-sblm-disc bg-success bg-opacity-25" readonly>
         </div>
     </div>
@@ -75,12 +75,12 @@ $existingItems = old('items', isset($invoice) ? $invoice->items->toArray() : [])
         </div>
         <div class="col-md-2 mb-2">
             <label>Total Diskon Item</label>
-            <input id="add-total_diskon_item" type="number"
+            <input id="add-total_diskon_item" type="text"
                 class="form-control total-diskon-item-input bg-success bg-opacity-25" readonly>
         </div>
         <div class="col-md-2 mb-2">
             <label>Subtotal Sebelum PPN</label>
-            <input id="add-sub_total_sebelum_ppn" type="number"
+            <input id="add-sub_total_sebelum_ppn" type="text"
                 class="form-control sub-total-sebelum-ppn-input bg-success bg-opacity-25" readonly>
         </div>
     </div>
@@ -91,7 +91,7 @@ $existingItems = old('items', isset($invoice) ? $invoice->items->toArray() : [])
         </div>
         <div class="col-md-3 mb-2">
             <label>Subtotal Setelah PPN</label>
-            <input id="add-sub_total_setelah_disc" type="number"
+            <input id="add-sub_total_setelah_disc" type="text"
                 class="form-control sub-total-setelah-disc-input bg-success bg-opacity-25" readonly>
         </div>
     </div>
@@ -164,18 +164,18 @@ $existingItems = old('items', isset($invoice) ? $invoice->items->toArray() : [])
         <td>${item.tanggal_expired||''}</td>
         <td>${item.qty||''}</td>
         <td>${(item.satuan||'').toUpperCase()}</td>
-        <td>${item.harga_satuan||''}</td>
-        <td>${item.sub_total_sblm_disc||''}</td>
+        <td>${Number(item.harga_satuan).toLocaleString()||''}</td>
+        <td>${Number(item.sub_total_sblm_disc).toLocaleString()||''}</td>
         <td>${item.diskon_1_persen||''}</td>
-        <td>${item.diskon_1_rupiah||''}</td>
+        <td>${Number(item.diskon_1_rupiah).toLocaleString()||''}</td>
         <td>${item.diskon_2_persen||''}</td>
-        <td>${item.diskon_2_rupiah||''}</td>
+        <td>${Number(item.diskon_2_rupiah).toLocaleString()||''}</td>
         <td>${item.diskon_3_persen||''}</td>
-        <td>${item.diskon_3_rupiah||''}</td>
-        <td>${item.total_diskon_item||''}</td>
-        <td>${item.sub_total_sebelum_ppn||''}</td>
+        <td>${Number(item.diskon_3_rupiah).toLocaleString()||''}</td>
+        <td>${Number(item.total_diskon_item).toLocaleString()||''}</td>
+        <td>${Number(item.sub_total_sebelum_ppn).toLocaleString()||''}</td>
         <td>${item.ppn_persen||''}</td>
-        <td>${item.sub_total_setelah_disc||''}</td>
+        <td>${Number(item.sub_total_setelah_disc).toLocaleString()||''}</td>
         <td>${item.catatan||''}</td>
   
         <td>
@@ -458,16 +458,16 @@ $existingItems = old('items', isset($invoice) ? $invoice->items->toArray() : [])
                   <td>${row.qty} ${row.satuan}</td>
                   <td>${Number(row.harga_satuan).toLocaleString()}</td>
                   <td>${row.diskon_1_persen||0}</td>
-                  <td>${row.diskon_1_rupiah||0}</td>
+                  <td>${Number(row.diskon_1_rupiah).toLocaleString()||0}</td>
                   <td>${row.diskon_2_persen||0}</td>
-                  <td>${row.diskon_2_rupiah||0}</td>
+                  <td>${Number(row.diskon_2_rupiah).toLocaleString()||0}</td>
                   <td>${row.diskon_3_persen||0}</td>
-                  <td>${row.diskon_3_rupiah||0}</td>
-                    <td>${Number(row.sub_total_sblm_disc).toLocaleString()}</td>
-                    <td>${Number(row.total_diskon_item).toLocaleString()}</td>
-                    <td>${Number(row.sub_total_sebelum_ppn).toLocaleString()}</td>
+                  <td>${Number(row.diskon_3_rupiah).toLocaleString()||0}</td>
+                    <td>${Number(row.sub_total_sblm_disc).toLocaleString()||0}</td>
+                    <td>${Number(row.total_diskon_item).toLocaleString()||0}</td>
+                    <td>${Number(row.sub_total_sebelum_ppn).toLocaleString()||0}</td>
                     <td>${row.ppn_persen||0}</td>
-                    <td>${Number(row.sub_total_setelah_disc).toLocaleString()}</td>
+                    <td>${Number(row.sub_total_setelah_disc).toLocaleString()||0}</td>
                     <td>${row.catatan||''}</td>
                 </tr>`;
             });

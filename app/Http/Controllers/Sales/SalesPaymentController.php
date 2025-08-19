@@ -72,7 +72,7 @@ class SalesPaymentController extends Controller
     public function create()
     {
         $customers = CompanyProfile::orderBy('name')
-            ->where('relationship', 'customer')
+            ->where('relationship','!=', 'supplier') // Hanya customer
             ->get();
         return view('sales.payments.create', compact('customers'));
     }
@@ -245,7 +245,7 @@ class SalesPaymentController extends Controller
     {
         $payment->load('customer', 'items.invoice', 'items.return');
         $customers = CompanyProfile::orderBy('name')
-            ->where('relationship', 'customer')
+            ->where('relationship', '!=', 'supplier') // Hanya customer
             ->get();
         return view('sales.payments.edit', compact('payment', 'customers'));
     }

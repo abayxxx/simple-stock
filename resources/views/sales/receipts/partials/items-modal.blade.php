@@ -16,6 +16,7 @@ $items = old('items', isset($receipt) ? $receipt->receiptItems->toArray() : []);
             <th>Jatuh Tempo</th>
             <th>Nilai Faktur</th>
             <th>Nilai Retur</th>
+            <th>Total Bayar</th>
             <th>Sisa Tagihan</th>
             <th>Catatan</th>
             <th></th>
@@ -40,7 +41,7 @@ $items = old('items', isset($receipt) ? $receipt->receiptItems->toArray() : []);
                 <h5 class="modal-title">Pilih Faktur Penjualan</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body p-2">
+            <div class="modal-body p-2 table-responsive">
                 <table class="table table-bordered table-hover table-sm" id="table-faktur-modal">
                     <thead class="table-light">
                         <tr>
@@ -50,6 +51,7 @@ $items = old('items', isset($receipt) ? $receipt->receiptItems->toArray() : []);
                             <th>Jatuh Tempo</th>
                             <th>Grand Total</th>
                             <th>Total Retur</th>
+                            <th>Total Bayar</th>
                             <th>Sisa Tagihan</th>
                         </tr>
                     </thead>
@@ -103,6 +105,10 @@ function renderSelectedFaktur() {
                     ${Number(item.total_retur).toLocaleString('id-ID')}
                 </td>
                 <td>
+                    <input type="hidden" class="total-bayar" name="items[${idx}][total_bayar]" value="${item.total_bayar}">
+                    ${Number(item.total_bayar).toLocaleString('id-ID')}
+                </td>
+                <td>
                     <input type="hidden" class="sisa-tagihan" name="items[${idx}][sisa_tagihan]" value="${item.sisa_tagihan}">
                     ${Number(item.sisa_tagihan).toLocaleString('id-ID')}
                 </td>
@@ -122,6 +128,7 @@ function renderSelectedFaktur() {
 function updateTotal() {
     let total = 0;
     let totalRetur = 0;
+    let totalDiterima = 0;
     $('.grand-total').each(function(){
         total += parseFloat($(this).val()) || 0;
     });
@@ -130,9 +137,13 @@ function updateTotal() {
         totalRetur += parseFloat($(this).val()) || 0;
     });
 
+    $('.sisa-tagihan').each(function(){
+        totalDiterima += parseFloat($(this).val()) || 0;
+    });
+
     // Update total diterima di footer
 
-    $('.total-diterima').text(Number(total - totalRetur).toLocaleString('id-ID'));
+    $('.total-diterima').text(Number(totalDiterima).toLocaleString('id-ID'));
 }
 
 $(function() {
@@ -154,6 +165,7 @@ $(function() {
                         data-jatuh_tempo="${inv.jatuh_tempo ?? ''}"
                         data-total_faktur="${inv.grand_total}"
                         data-sisa_tagihan="${inv.sisa_tagihan}"
+                        data-total_bayar="${inv.total_bayar}"
                         data-total_retur="${inv.total_retur}"></td>
                         ></td>
                     <td>${inv.kode}</td>
@@ -161,6 +173,7 @@ $(function() {
                     <td>${inv.jatuh_tempo ?? '-'}</td>
                     <td>${Number(inv.grand_total).toLocaleString('id-ID')}</td>
                     <td>${Number(inv.total_retur).toLocaleString('id-ID')}</td>
+                    <td>${Number(inv.total_bayar).toLocaleString('id-ID')}</td>
                     <td>${Number(inv.sisa_tagihan).toLocaleString('id-ID')}</td>
                 </tr>`;
             });
@@ -188,6 +201,7 @@ $(function() {
                     jatuh_tempo: $(this).data('jatuh_tempo'),
                     total_faktur: $(this).data('total_faktur'),
                     sisa_tagihan: $(this).data('sisa_tagihan'),
+                    total_bayar: $(this).data('total_bayar'),
                     total_retur: $(this).data('total_retur')
                 });
             }
@@ -218,6 +232,7 @@ $(function() {
                     'jatuh_tempo' => $i['invoice']['jatuh_tempo'] ?? '',
                     'total_faktur' => $i['total_faktur'] ?? 0,
                     'sisa_tagihan' => $i['sisa_tagihan'] ?? 0,
+                    'total_bayar' => $i['total_bayar'] ?? 0,
                     'total_retur' => $i['total_retur'] ?? 0,
                 ];
             });

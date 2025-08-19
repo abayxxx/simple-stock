@@ -69,10 +69,13 @@ Route::middleware('auth')->group(function () {
 
             // *Stock List*
             Route::get('lists', [StockListController::class, 'index'])->name('stocks.lists.index');
+            Route::get('lists/export', [StockListController::class, 'export'])->name('stocks.lists.export');
             Route::get('lists/datatable', [StockListController::class, 'datatable'])->name('stocks.lists.datatable');
 
             // *Stock Card*
             Route::get('cards', [StockCardController::class, 'index'])->name('stocks.cards');
+            Route::get('cards/export', [StockCardController::class, 'export'])->name('stocks.cards.export');
+            Route::get('cards/export-pdf', [StockCardController::class, 'exportPdf'])->name('stocks.cards.exportPdf');
             Route::get('cards/datatable', [StockCardController::class, 'datatable'])->name('stocks.cards.datatable');
 
 
@@ -133,6 +136,11 @@ Route::middleware('auth')->group(function () {
             Route::get('receipts/{receipt}/lock', [SalesReceiptController::class, 'lock'])->name('receipts.lock');
             Route::get('receipts/filter-options', [SalesReceiptController::class, 'filterOptions'])
                 ->name('receipts.filter-options');
+            // routes/web.php
+            Route::get('receipts/export-pdf', [\App\Http\Controllers\Sales\SalesReceiptController::class, 'exportPdf'])
+                ->name('receipts.exportPdf');
+            Route::get('receipts/export', [\App\Http\Controllers\Sales\SalesReceiptController::class, 'export'])
+                ->name('receipts.export');
             Route::resource('receipts', SalesReceiptController::class);
 
             // *Payments*

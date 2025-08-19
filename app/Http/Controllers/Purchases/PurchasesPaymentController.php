@@ -71,7 +71,7 @@ class PurchasesPaymentController extends Controller
     public function create()
     {
         $suppliers = CompanyProfile::orderBy('name')
-            ->where('relationship', 'supplier')
+            ->where('relationship', '!=', 'customer') // Only suppliers
             ->get();
         return view('purchases.payments.create', compact('suppliers'));
     }
@@ -243,7 +243,7 @@ class PurchasesPaymentController extends Controller
     {
         $payment->load('supplier', 'items.invoice', 'items.return');
         $suppliers = CompanyProfile::orderBy('name')
-            ->where('relationship', 'supplier')
+            ->where('relationship', '!=', 'customer')
             ->get();
         return view('purchases.payments.edit', compact('payment', 'suppliers'));
     }
