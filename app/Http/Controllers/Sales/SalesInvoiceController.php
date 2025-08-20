@@ -422,6 +422,7 @@ class SalesInvoiceController extends Controller
     public function print($id)
     {
         $invoice = SalesInvoice::with(['customer', 'items.product', 'salesGroup'])->findOrFail($id);
+        
         return view('sales.invoices.print', compact('invoice'));
     }
 

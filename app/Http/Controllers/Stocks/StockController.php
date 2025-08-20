@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Stocks;
 
+use App\Exports\StocksMovementExport;
 use App\Http\Controllers\Controller;
 use App\Models\Stock;
 use App\Models\Product;
@@ -10,6 +11,7 @@ use App\Models\SalesInvoiceItem;
 use Illuminate\Http\Request;
 use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
 
 class StockController extends Controller
 {
@@ -32,9 +34,23 @@ class StockController extends Controller
         return view("stocks.$type.index", compact('type', 'title'));
     }
 
-    public function datatable($type)
+    public function datatable(Request $request, $type)
     {
-        $stocks = Stock::with('product')->where('type', $type)->orderByDesc('id');
+        $stocks = Stock::with('product')
+        //If stock is input by invoice exclude that (Check from catatan IF catatan has CODE LIKE '['RT','HR','PI']')
+            ->where('catatan', 'NOT LIKE', '%RT.%')
+            ->where('catatan', 'NOT LIKE', '%HR.%')
+            ->where('catatan', 'NOT LIKE', '%PI.%')
+            ->where('catatan', 'NOT LIKE', '%SI.%')
+            ->where('type', $type)->orderByDesc('id');
+
+        // Filter by date range if provided
+        if ($request->filled('periode_awal') && $request->filled('periode_akhir')) {
+            $awal = $request->input('periode_awal') . ' 00:00:00';
+            $akhir = $request->input('periode_akhir') . ' 23:59:59';
+            $stocks->whereBetween('created_at', [$awal, $akhir]);
+        }
+        
         return DataTables::of($stocks)
             ->editColumn('tanggal', fn($row) => $row->created_at->format('d M Y'))
             ->addColumn('status', fn($row) => 'Aktif')
@@ -255,5 +271,25 @@ class StockController extends Controller
                 ];
             })->values();
         return response()->json($data);
+    }
+
+    public function export(Request $request, string $type)
+    {
+        // same filters you use in datatable
+        $awal  = $request->input('periode_awal');   // 'YYYY-MM-DD'
+        $akhir = $request->input('periode_akhir');  // 'YYYY-MM-DD'
+
+        abort_unless(in_array($type, ['in','out','destroy'], true), 404);
+
+        $filename = match ($type) {
+            'in'      => 'stok_masuk.xlsx',
+            'out'     => 'stok_keluar.xlsx',
+            'destroy' => 'stok_pemusnahan.xlsx',
+        };
+
+        return Excel::download(
+            new StocksMovementExport($type, $awal, $akhir),
+            $filename
+        );
     }
 }

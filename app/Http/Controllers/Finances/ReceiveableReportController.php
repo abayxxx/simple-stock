@@ -14,7 +14,7 @@ class ReceiveableReportController extends Controller
 {
     public function index(Request $request)
     {
-        $date = $request->get('tanggal', now()->toDateString() ?? now()->format('Y-m-d') . ' 00:00:00');
+        $date = $request->get('tanggal', now()->toDateString() ?? now()->format('Y-m-d') . ' 23:59:59');
 
         if ($request->ajax()) {
             $customerSummary = SalesInvoice::select([
@@ -24,7 +24,7 @@ class ReceiveableReportController extends Controller
                     DB::raw('SUM(sisa_tagihan) as total_sisa')
                 ])
                 ->with('customer')
-                ->where('sisa_tagihan', '>', 0)
+                // ->where('sisa_tagihan', '>', 0)
                 ->whereDate('tanggal', '<=', $date)
                 ->groupBy('company_profile_id')
                 ->get();

@@ -164,18 +164,18 @@ $(function() {
             <td>${item.tanggal_expired||''}</td>
             <td>${item.qty||''}</td>
             <td>${(item.satuan||'').toUpperCase()}</td>
-            <td>${item.harga_satuan||''}</td>
-            <td>${item.sub_total_sblm_disc||''}</td>
+            <td>${Number(item.harga_satuan||'').toLocaleString()}</td>
+            <td>${Number(item.sub_total_sblm_disc||'').toLocaleString()}</td>
             <td>${item.diskon_1_persen||''}</td>
-            <td>${item.diskon_1_rupiah||''}</td>
+            <td>${Number(item.diskon_1_rupiah||'').toLocaleString()}</td>
             <td>${item.diskon_2_persen||''}</td>
-            <td>${item.diskon_2_rupiah||''}</td>
+            <td>${Number(item.diskon_2_rupiah||'').toLocaleString()}</td>
             <td>${item.diskon_3_persen||''}</td>
-            <td>${item.diskon_3_rupiah||''}</td>
-            <td>${item.total_diskon_item||''}</td>
-            <td>${item.sub_total_sebelum_ppn||''}</td>
+            <td>${Number(item.diskon_3_rupiah||'').toLocaleString()}</td>
+            <td>${Number(item.total_diskon_item||'').toLocaleString()}</td>
+            <td>${Number(item.sub_total_sebelum_ppn||'').toLocaleString()}</td>
             <td>${item.ppn_persen||''}</td>
-            <td>${item.sub_total_setelah_disc||''}</td>
+            <td>${Number(item.sub_total_setelah_disc||'').toLocaleString()}</td>
             <td>${item.catatan||''}</td>
             <td class="">
             <button type="button" class="btn btn-danger btn-sm btn-remove-item"><i class="fa fa-trash"></i> </button>

@@ -36,15 +36,15 @@ class StockListController extends Controller
             })
             ->addColumn('akhir', function ($r) use ($awal, $akhir) {
                 // Ambil stok akhir hanya sampai tanggal filter
-                $in = \App\Models\Stock::where('product_id', $r->id)
+                $in = Stock::where('product_id', $r->id)
                     ->where('type', 'in')
                     ->whereDate('created_at', '<=', $akhir)
                     ->sum('jumlah');
-                $out = \App\Models\Stock::where('product_id', $r->id)
+                $out = Stock::where('product_id', $r->id)
                     ->where('type', 'out')
                     ->whereDate('created_at', '<=', $akhir)
                     ->sum('jumlah');
-                $destroy = \App\Models\Stock::where('product_id', $r->id)
+                $destroy = Stock::where('product_id', $r->id)
                     ->where('type', 'destroy')
                     ->whereDate('created_at', '<=', $akhir)
                     ->sum('jumlah');

@@ -83,6 +83,9 @@ Route::middleware('auth')->group(function () {
             Route::get('get-sisa-stok/{product_id}', [StockController::class, 'calculateSisaStok'])->name('stock.get_sisa_stok');
             Route::get('product-options/{product}', [StockController::class, 'getProductOptions']);
 
+            Route::get('{type}/export-excel', [StockController::class, 'export'])
+                ->whereIn('type', ['in','out','destroy'])
+                ->name('stocks.export');
 
             Route::get('in', [StockController::class, 'indexIn'])->name('stock.in');
             Route::get('out', [StockController::class, 'indexOut'])->name('stock.out');
