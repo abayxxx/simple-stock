@@ -174,7 +174,7 @@ class PurchasesPaymentController extends Controller
                 $retur   = (float)($row['retur']   ?? 0);
 
                 // Your UI adds RETUR into subtotal; mirror that here:
-                $computedSubtotal = $tunai + $bank + $giro + $cndn + $panjar + $lainnya + $retur;
+                $computedSubtotal = $tunai + $bank + $giro + $cndn + $panjar + $lainnya;
 
                 // // Cap by sisa if present (avoid overpay)
                 // $sisa = isset($row['sisa']) ? (float)$row['sisa'] : null;
@@ -183,7 +183,7 @@ class PurchasesPaymentController extends Controller
                 // }
 
                 // Write back the computed subtotal
-                $row['sub_total'] = $computedSubtotal;
+                $row['sub_total'] = $computedSubtotal + $retur; // Include retur in subtotal
 
                 // Create item
                 $item = $payment->items()->create($row);
@@ -193,7 +193,7 @@ class PurchasesPaymentController extends Controller
                     $invoice = PurchasesInvoice::lockForUpdate()->find($row['purchases_invoice_id']);
                     if ($invoice) {
                         $invoice->total_bayar  = ($invoice->total_bayar ?? 0) + $computedSubtotal;
-                        $invoice->sisa_tagihan = max(0, ($invoice->sisa_tagihan ?? 0) - $computedSubtotal);
+                        $invoice->sisa_tagihan = max(0, ($invoice->sisa_tagihan ?? 0) - ($computedSubtotal + $retur));
                         // If you track retur at invoice level (you did in your sales update method)
                         $invoice->total_retur  = ($invoice->total_retur ?? 0) + $retur;
 
@@ -205,7 +205,7 @@ class PurchasesPaymentController extends Controller
                     $ret = PurchasesReturn::lockForUpdate()->find($row['purchases_return_id']);
                     if ($ret) {
                         $ret->total_bayar  = ($ret->total_bayar ?? 0) + $computedSubtotal;
-                        $ret->sisa_tagihan = max(0, ($ret->sisa_tagihan ?? 0) - $computedSubtotal);
+                        $ret->sisa_tagihan = max(0, ($ret->sisa_tagihan ?? 0) - ($computedSubtotal + $retur));
                         // If returns also track retur component, mirror as needed:
                         $ret->total_retur   = ($ret->total_retur ?? 0) + $retur;
 
@@ -297,7 +297,7 @@ class PurchasesPaymentController extends Controller
                 if ($subDiff == 0 && $returDiff == 0) return;
 
                 if ($tipeNota === 'FAKTUR' && $purchasesInvoiceId) {
-                    $invoice = \App\Models\PurchasesInvoice::lockForUpdate()->find($purchasesInvoiceId);
+                    $invoice = PurchasesInvoice::lockForUpdate()->find($purchasesInvoiceId);
                     if ($invoice) {
                         // subDiff > 0 means add to total_bayar and reduce sisa_tagihan
                         $invoice->total_bayar = ($invoice->total_bayar ?? 0) + $subDiff;
@@ -306,7 +306,7 @@ class PurchasesPaymentController extends Controller
                         $invoice->save();
                     }
                 } elseif ($tipeNota === 'RETUR' && $purchasesReturnId) {
-                    $ret = \App\Models\PurchasesReturn::lockForUpdate()->find($purchasesReturnId);
+                    $ret = PurchasesReturn::lockForUpdate()->find($purchasesReturnId);
                     if ($ret) {
                         $ret->total_bayar   = ($ret->total_bayar ?? 0) + $subDiff;
                         $ret->sisa_tagihan  = max(0, ($ret->sisa_tagihan ?? 0) - $subDiff);
@@ -401,14 +401,14 @@ class PurchasesPaymentController extends Controller
             foreach ($payment->items as $item) {
                 if ($item->tipe_nota === 'FAKTUR' && !empty($item->purchases_invoice_id)) {
                     $invoice = PurchasesInvoice::find($item->purchases_invoice_id);
-                    $invoice->total_bayar -= $item->sub_total;
+                    $invoice->total_bayar -= ($item->sub_total - $item->retur);
                     $invoice->sisa_tagihan = max(0, $invoice->sisa_tagihan + $item->sub_total);
                     $invoice->total_retur -= $item->retur;
                     $invoice->save();
                 }
                 if ($item->tipe_nota === 'RETUR' && !empty($item->purchases_return_id)) {
                     $return = PurchasesReturn::find($item->purchases_return_id);
-                    $return->total_bayar -= $item->sub_total;
+                    $return->total_bayar -= ($item->sub_total - $item->retur);
                     $return->sisa_tagihan = max(0, $return->sisa_tagihan + $item->sub_total);
                     $return->total_retur -= $item->retur;
                     $return->save();

@@ -284,9 +284,13 @@ $(function() {
             $('#add-tanggal_expired').html(tglExpOpts);
         });
         // Update satuan
-        let satuan = $('#add-product_id option:selected').data('satuan_kecil') || '';
-        $('.satuan-box').text(satuan ? satuan.toUpperCase() : 'Satuan');
-        $('#add-satuan').val(satuan);
+        // Update satuan
+        let data = $('#add-product_id').select2('data')[0] || {};
+// fallback to option’s data-* attribute
+        let optDataSatuan = $('#add-product_id option:selected').data('satuan_kecil');
+        let satuanKecil = data.satuan_kecil || optDataSatuan || '';
+        $('.satuan-box').text(satuanKecil ? satuanKecil.toUpperCase() : 'Satuan');
+        $('#add-satuan').val(satuanKecil || '');
     });
 
     // --- Batch/seri/expired change: auto fill harga/diskon/qty if needed

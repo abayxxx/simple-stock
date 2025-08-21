@@ -41,7 +41,7 @@ services:
     volumes:
       - dbdata:/var/lib/mysql
     ports:
-      - "3306:3306"   # expose only if you need external access
+      - "127.0.0.1:3306:3306"   # expose only if you need external access
     networks: [appnet]
 
   redis:

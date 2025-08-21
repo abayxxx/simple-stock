@@ -289,7 +289,6 @@ $existingItems = old('items', isset($invoice) ? $invoice->items->toArray() : [])
         };
          // Prefill Select2 correctly
         const p = products[item.product_id] || { id: item.product_id, kode: '', nama: item.product_name || '', satuan_kecil: '' };
-        console.log('Editing item:', item, p, products);
         select2SetProduct($('#add-product_id'), p);
         // Populate form with item data
         $('#add-product_id').val(item.product_id).trigger('change');

@@ -175,7 +175,7 @@ class SalesPaymentController extends Controller
                 $retur   = (float)($row['retur']   ?? 0);
 
                 // Your UI adds RETUR into subtotal; mirror that here:
-                $computedSubtotal = $tunai + $bank + $giro + $cndn + $panjar + $lainnya + $retur;
+                $computedSubtotal = $tunai + $bank + $giro + $cndn + $panjar + $lainnya ;
 
                 // Cap by sisa if present (avoid overpay)
                 // $sisa = isset($row['sisa']) ? (float)$row['sisa'] : null;
@@ -184,7 +184,7 @@ class SalesPaymentController extends Controller
                 // }
 
                 // Write back the computed subtotal
-                $row['sub_total'] = $computedSubtotal;
+                $row['sub_total'] = $computedSubtotal+ $retur; // Include retur in subtotal
 
                 // Create item
                 $item = $payment->items()->create($row);
@@ -194,7 +194,7 @@ class SalesPaymentController extends Controller
                     $invoice = SalesInvoice::lockForUpdate()->find($row['sales_invoice_id']);
                     if ($invoice) {
                         $invoice->total_bayar  = ($invoice->total_bayar ?? 0) + $computedSubtotal;
-                        $invoice->sisa_tagihan = max(0, ($invoice->sisa_tagihan ?? 0) - $computedSubtotal);
+                        $invoice->sisa_tagihan = max(0, ($invoice->sisa_tagihan ?? 0) - ($computedSubtotal + $retur));
                         // If you track retur at invoice level (you did in your sales update method)
                         $invoice->total_retur  = ($invoice->total_retur ?? 0) + $retur;
 
@@ -206,7 +206,7 @@ class SalesPaymentController extends Controller
                     $ret = SalesReturn::lockForUpdate()->find($row['sales_return_id']);
                     if ($ret) {
                         $ret->total_bayar  = ($ret->total_bayar ?? 0) + $computedSubtotal;
-                        $ret->sisa_tagihan = max(0, ($ret->sisa_tagihan ?? 0) - $computedSubtotal);
+                        $ret->sisa_tagihan = max(0, ($ret->sisa_tagihan ?? 0) - ($computedSubtotal + $retur));
                         // If returns also track retur component, mirror as needed:
                         $ret->total_retur   = ($ret->total_retur ?? 0) + $retur;
 
@@ -403,14 +403,14 @@ class SalesPaymentController extends Controller
             foreach ($payment->items as $item) {
                 if ($item->tipe_nota === 'FAKTUR' && !empty($item->sales_invoice_id)) {
                     $invoice = SalesInvoice::find($item->sales_invoice_id);
-                    $invoice->total_bayar -= $item->sub_total;
+                    $invoice->total_bayar -= ($item->sub_total - $item->retur);
                     $invoice->sisa_tagihan = max(0, $invoice->sisa_tagihan + $item->sub_total);
                     $invoice->total_retur -= $item->retur;
                     $invoice->save();
                 }
                 if ($item->tipe_nota === 'RETUR' && !empty($item->sales_return_id)) {
                     $return = SalesReturn::find($item->sales_return_id);
-                    $return->total_bayar -= $item->sub_total;
+                    $return->total_bayar -= ($item->sub_total - $item->retur);
                     $return->sisa_tagihan = max(0, $return->sisa_tagihan + $item->sub_total);
                     $return->total_retur -= $item->retur;
                     $return->save();

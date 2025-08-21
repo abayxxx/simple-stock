@@ -91,33 +91,33 @@
                     <div class="row gy-2 gx-3 mt-2">
                         <div class="col-md-2">
                             <label>Tunai</label>
-                            <input name="items[${idx}][tunai]" type="number" class="form-control bayar-input tunai-input" min="0" value="${item.tunai ?? 0}">
+                            <input name="items[${idx}][tunai]" type="number" class="form-control bayar-input tunai-input" min="0" data-tunai-db="${item.tunai ?? 0}" value="${item.tunai ?? 0}">
                         </div>
                         <div class="col-md-2">
                             <label>BANK</label>
-                            <input name="items[${idx}][bank]" type="number" class="form-control bayar-input bank-input" min="0" value="${item.bank ?? 0}">
+                            <input name="items[${idx}][bank]" type="number" class="form-control bayar-input bank-input" min="0" data-bank-db="${item.bank ?? 0}" value="${item.bank ?? 0}">
                         </div>
                         <div class="col-md-2">
                             <label>GIRO</label>
-                            <input name="items[${idx}][giro]" type="number" class="form-control bayar-input giro-input" min="0" value="${item.giro ?? 0}">
+                            <input name="items[${idx}][giro]" type="number" class="form-control bayar-input giro-input" min="0" data-giro-db="${item.giro ?? 0}" value="${item.giro ?? 0}">
                         </div>
                         <div class="col-md-2">
                             <label>CNDN</label>
-                            <input name="items[${idx}][cndn]" type="number" class="form-control bayar-input cndn-input" min="0" value="${item.cndn ?? 0}">
+                            <input name="items[${idx}][cndn]" type="number" class="form-control bayar-input cndn-input" min="0" data-cndn-db="${item.cndn ?? 0}" value="${item.cndn ?? 0}">
                         </div>
                         <div class="col-md-2">
                             <label>RETUR</label>
-                            <input name="items[${idx}][retur]" type="number" class="form-control retur-input" value="${item.retur || 0}">
+                            <input name="items[${idx}][retur]" type="number" class="form-control retur-input" data-retur-db="${item.retur || 0}" value="${item.retur || 0}">
                         </div>
                         <div class="col-md-2">
                             <label>PANJAR</label>
-                            <input name="items[${idx}][panjar]" type="number" class="form-control bayar-input panjar-input" min="0" value="${item.panjar ?? 0}">
+                            <input name="items[${idx}][panjar]" type="number" class="form-control bayar-input panjar-input" min="0" data-panjar-db="${item.panjar ?? 0}" value="${item.panjar ?? 0}">
                         </div>
                     </div>
                     <div class="row gy-2 gx-3 mt-2">
                         <div class="col-md-2">
                             <label>LAINNYA</label>
-                            <input name="items[${idx}][lainnya]" type="number" class="form-control bayar-input lainnya-input" min="0" value="${item.lainnya ?? 0}">
+                            <input name="items[${idx}][lainnya]" type="number" class="form-control bayar-input lainnya-input" min="0" data-lainnya-db="${item.lainnya ?? 0}" value="${item.lainnya ?? 0}">
                         </div>
                         <div class="col-md-2">
                             <label>SUBTOTAL</label>
@@ -148,28 +148,29 @@
 
         // Get payment inputs
         let tunai = parseFloat($card.find('.tunai-input').val()) || 0;
+        let tunaiDb = parseFloat($card.find('.tunai-input').data('tunai-db')) || 0;
         let bank = parseFloat($card.find('.bank-input').val()) || 0;
+        let bankDb = parseFloat($card.find('.bank-input').data('bank-db')) || 0;
         let giro = parseFloat($card.find('.giro-input').val()) || 0;
+        let giroDb = parseFloat($card.find('.giro-input').data('giro-db')) || 0;
         let cndn = parseFloat($card.find('.cndn-input').val()) || 0;
+        let cndnDb = parseFloat($card.find('.cndn-input').data('cndn-db')) || 0;
         let panjar = parseFloat($card.find('.panjar-input').val()) || 0;
+        let panjarDb = parseFloat($card.find('.panjar-input').data('panjar-db')) || 0;
         let lainnya = parseFloat($card.find('.lainnya-input').val()) || 0;
+        let lainnyaDb = parseFloat($card.find('.lainnya-input').data('lainnya-db')) || 0;
         let retur = parseFloat($card.find('.retur-input').val()) || 0;
+        let returDb = parseFloat($card.find('.retur-input').data('retur-db')) || 0;
         let nilaiNota = parseFloat($card.find('.nilai-nota').val()) || 0;
 
-        let sisaOld = parseFloat($card.find('.nilai-nota').val()) !== parseFloat($card.find('.sisa-input').val()) ? 
-            parseFloat($card.find('.sisa-db').val()) || 0 : 
-            parseFloat($card.find('.nilai-nota').val()) || 0;
-        let subtotalDb = parseFloat($card.find('.subtotal-input').data('subtotal-db')) || 0;
-
-        if (subtotalDb > 0){
-                sisaOld = parseFloat($card.find('.nilai-nota').val()) || 0;
-            }
+        let sisaOld = parseFloat($card.find('.sisa-db').val()) || 0;
 
         // Get sisa from the card
 
         // Calculate subtotal and sisa
-        let subtotal = tunai + bank + giro + cndn + panjar + lainnya + retur;
-        let sisa = sisaOld - subtotal;
+        let subtotal = tunai + bank + giro + cndn + panjar + lainnya + retur;   
+        let subtotalDb = tunaiDb + bankDb + giroDb + cndnDb + panjarDb + lainnyaDb + returDb;
+        let sisa = sisaOld - (subtotal - subtotalDb);
 
         $card.find('.subtotal-input').val(subtotal.toFixed(2));
         $card.find('.sisa-input').val(sisa.toFixed(2));

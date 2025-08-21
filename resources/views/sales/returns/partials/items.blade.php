@@ -292,9 +292,12 @@ $existingItems = old('items', isset($return) ? $return->items->toArray() : []);
                 $('#add-tanggal_expired').html(tglExpOpts);
             });
             // Update satuan
-            let satuan = $('#add-product_id option:selected').data('satuan_kecil') || '';
-            $('.satuan-box').text(satuan ? satuan.toUpperCase() : 'Satuan');
-            $('#add-satuan').val(satuan);
+            let data = $('#add-product_id').select2('data')[0] || {};
+  // fallback to option’s data-* attribute
+            let optDataSatuan = $('#add-product_id option:selected').data('satuan_kecil');
+            let satuanKecil = data.satuan_kecil || optDataSatuan || '';
+            $('.satuan-box').text(satuanKecil ? satuanKecil.toUpperCase() : 'Satuan');
+            $('#add-satuan').val(satuanKecil || '');
         });
 
         // Batch/seri/expired change: auto fill harga/diskon/qty if needed
@@ -486,6 +489,8 @@ $existingItems = old('items', isset($return) ? $return->items->toArray() : []);
             // Update summary
             updateSummary();
         });
+
+   
 
         // Sisa stok live
     $('#add-product_id, #add-lokasi_id, #add-qty').on('change input', function() {
