@@ -328,7 +328,7 @@ class PurchasesReturnController extends Controller
         foreach ($oldItems as $old) {
             Stock::where([
                 'product_id'      => $old->product_id,
-                'type'            => 'in',
+                'type'            => 'out',
             ])
             ->where('catatan', 'like', "Retur Pembelian (Retur: {$originalKode})%")
             ->delete();
