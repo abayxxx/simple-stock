@@ -17,6 +17,7 @@ use Yajra\DataTables\Facades\DataTables;
 use App\Http\Controllers\Controller;
 use App\Models\Stock;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Validation\ValidationException;
 use Maatwebsite\Excel\Facades\Excel;
 
 class SalesInvoiceController extends Controller
@@ -123,7 +124,7 @@ class SalesInvoiceController extends Controller
         return view('sales.invoices.create', compact('customers', 'salesGroups', 'branches'));
     }
 
-    public function store(Request $request)
+   public function store(Request $request)
     {
         $data = $request->validate([
             'kode' => 'nullable|string|max:50|unique:sales_invoices,kode',
@@ -138,13 +139,8 @@ class SalesInvoiceController extends Controller
             'catatan' => 'nullable|string',
             'diskon_faktur' => 'nullable|numeric',
             'diskon_ppn' => 'nullable|numeric',
-            'subtotal' => 'nullable|numeric',
-            'grand_total' => 'nullable|numeric',
-            'total_retur' => 'nullable|numeric',
-            'total_bayar' => 'nullable|numeric',
-            'sisa_tagihan' => 'nullable|numeric',
             'jatuh_tempo' => 'nullable|date',
-            // Items array
+
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|integer|exists:products,id',
             'items.*.lokasi_id' => 'nullable|integer',
@@ -153,14 +149,12 @@ class SalesInvoiceController extends Controller
             'items.*.harga_satuan' => 'required|numeric|min:0',
             'items.*.no_seri' => 'nullable|string|max:50',
             'items.*.tanggal_expired' => 'nullable|string',
-
             'items.*.diskon_1_persen' => 'nullable|numeric|min:0',
             'items.*.diskon_1_rupiah' => 'nullable|numeric|min:0',
             'items.*.diskon_2_persen' => 'nullable|numeric|min:0',
             'items.*.diskon_2_rupiah' => 'nullable|numeric|min:0',
             'items.*.diskon_3_persen' => 'nullable|numeric|min:0',
             'items.*.diskon_3_rupiah' => 'nullable|numeric|min:0',
-
             'items.*.sub_total_sblm_disc' => 'nullable|numeric',
             'items.*.total_diskon_item' => 'nullable|numeric',
             'items.*.sub_total_sebelum_ppn' => 'nullable|numeric',
@@ -169,43 +163,72 @@ class SalesInvoiceController extends Controller
             'items.*.catatan' => 'nullable|string',
         ]);
 
-        if ($request->input('auto_kode')) {
+        $data['diskon_faktur'] = $data['diskon_faktur'] ?? 0;
+        $data['diskon_ppn']    = $data['diskon_ppn'] ?? 0;
+        $data['is_tunai']      = (bool)($data['is_tunai'] ?? false);
+
+        if ($request->boolean('auto_kode')) {
             $data['kode'] = self::generateKode();
         } else {
-            if (!$data['kode'] || $data['kode'] == '(auto)') {
+            if (empty($data['kode']) || $data['kode'] === '(auto)') {
                 return back()->withInput()->withErrors(['kode' => 'Nomor Faktur harus diisi jika mode auto tidak dipilih']);
             }
-        }
-
-        // Check if diskon faktur and PPN are set
-        if (!isset($data['diskon_faktur'])) {
-            $data['diskon_faktur'] = 0;
-        }
-        if (!isset($data['diskon_ppn'])) {
-            $data['diskon_ppn'] = 0;
         }
 
         $items = $data['items'];
         unset($data['items']);
 
-        DB::transaction(function () use ($data, $items, &$invoice) {
-            $invoice = SalesInvoice::create($data + ['user_id' => auth()->id()]);
+        DB::transaction(function () use (&$invoice, $data, $items) {
+            $subtotal = 0;
+            foreach ($items as $it) {
+                $line = (float)$it['qty'] * (float)$it['harga_satuan'];
+                $p1 = $it['diskon_1_persen'] ?? 0; if ($p1) $line -= $line * ($p1/100);
+                $p2 = $it['diskon_2_persen'] ?? 0; if ($p2) $line -= $line * ($p2/100);
+                $p3 = $it['diskon_3_persen'] ?? 0; if ($p3) $line -= $line * ($p3/100);
+                $r1 = $it['diskon_1_rupiah'] ?? 0; $line -= $r1;
+                $r2 = $it['diskon_2_rupiah'] ?? 0; $line -= $r2;
+                $r3 = $it['diskon_3_rupiah'] ?? 0; $line -= $r3;
+                if ($line < 0) $line = 0;
+                $subtotal += $line;
+            }
+
+            $grand = max(0, $subtotal - ($data['diskon_faktur'] ?? 0));
+            if (!empty($data['diskon_ppn'])) {
+                $grand += $grand * ($data['diskon_ppn'] / 100);
+            }
+
+            $header = $data + [
+                'subtotal'     => $subtotal,
+                'grand_total'  => $grand,
+                'total_retur'  => 0,
+                'total_bayar'  => 0,
+                'sisa_tagihan' => $grand,
+                'user_id'      => auth()->id(),
+            ];
+
+            $invoice = SalesInvoice::create($header);
+
             foreach ($items as $item) {
-                // 1. Cek sisa stok PER BATCH
-                $sisa = $this->getSisaStokBatch($item['product_id'], $item['no_seri'] ?? null, $item['tanggal_expired'] ?? null);
+                $batchRows = DB::table('stocks')
+                    ->where('product_id', $item['product_id'])
+                    // ->when(!empty($item['no_seri']), fn($q) => $q->where('no_seri', $item['no_seri']))
+                    // ->when(!empty($item['tanggal_expired']), fn($q) => $q->where('tanggal_expired', $item['tanggal_expired']))
+                    ->lockForUpdate()
+                    ->get();
 
+                $available = ($batchRows->where('type','in')->sum('jumlah'))
+                            - ($batchRows->where('type','out')->sum('jumlah'))
+                            - ($batchRows->where('type','destroy')->sum('jumlah'));
 
-                if ($item['qty'] > $sisa) {
+                if ($item['qty'] > $available) {
                     throw \Illuminate\Validation\ValidationException::withMessages([
-                        "items.*.qty" => "Stok tidak cukup untuk produk {$item['product_id']} di seri/expired yang dipilih. Sisa: $sisa"
+                        "items.*.qty" => "Stok tidak cukup untuk produk {$item['product_id']} di batch yang dipilih. Sisa: {$available}"
                     ]);
                 }
 
-                // 2. Buat invoice item
-                $invoice->items()->create($item);
+                $invoiceItem = $invoice->items()->create($item);
 
-                // 3. Buat stok keluar
-                Stock::create([
+                $stockId = Stock::create([
                     'product_id'       => $item['product_id'],
                     'type'             => 'out',
                     'jumlah'           => $item['qty'],
@@ -213,15 +236,16 @@ class SalesInvoiceController extends Controller
                     'tanggal_expired'  => $item['tanggal_expired'] ?? null,
                     'harga_net'        => $item['harga_satuan'],
                     'catatan'          => "Penjualan (Faktur: {$invoice->kode})" . (isset($item['catatan']) ? " - {$item['catatan']}" : ''),
-                    'sisa_stok'        => 0, // Diupdate setelah ini
-                ]);
-                // 4. Update sisa stok untuk batch ini
+                    'sisa_stok'        => 0,
+                ])->id;
+
                 self::updateAllSisaStok($item['product_id'], $item['no_seri'] ?? null, $item['tanggal_expired'] ?? null);
             }
         });
 
         return redirect()->route('sales.invoices.index')->with('success', 'Faktur penjualan berhasil dibuat.');
     }
+
 
     public function show(SalesInvoice $invoice)
     {
@@ -249,10 +273,14 @@ class SalesInvoiceController extends Controller
         return view('sales.invoices.edit', compact('invoice', 'customers', 'salesGroups', 'products', 'branches'));
     }
 
-    public function update(Request $request, SalesInvoice $invoice)
+   public function update(Request $request, SalesInvoice $invoice)
     {
+        // ✅ Block jika locked
+        // if ($invoice->is_locked) {
+        //     return redirect()->route('sales.invoices.index')
+        //         ->withErrors(['error' => 'Faktur ini sudah terkunci dan tidak bisa diubah.']);
+        // }
 
-        //code...
         $data = $request->validate([
             'kode' => 'nullable|string|max:50|unique:sales_invoices,kode,' . $invoice->id,
             'auto_kode' => 'nullable|in:1',
@@ -272,7 +300,6 @@ class SalesInvoiceController extends Controller
             'total_bayar' => 'nullable|numeric',
             'sisa_tagihan' => 'nullable|numeric',
             'jatuh_tempo' => 'nullable|date',
-            // Items array
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|integer|exists:products,id',
             'items.*.lokasi_id' => 'nullable|integer',
@@ -281,14 +308,12 @@ class SalesInvoiceController extends Controller
             'items.*.harga_satuan' => 'required|numeric|min:0',
             'items.*.no_seri' => 'nullable|string|max:50',
             'items.*.tanggal_expired' => 'nullable|string',
-
             'items.*.diskon_1_persen' => 'nullable|numeric|min:0',
             'items.*.diskon_1_rupiah' => 'nullable|numeric|min:0',
             'items.*.diskon_2_persen' => 'nullable|numeric|min:0',
             'items.*.diskon_2_rupiah' => 'nullable|numeric|min:0',
             'items.*.diskon_3_persen' => 'nullable|numeric|min:0',
             'items.*.diskon_3_rupiah' => 'nullable|numeric|min:0',
-
             'items.*.sub_total_sblm_disc' => 'nullable|numeric',
             'items.*.total_diskon_item' => 'nullable|numeric',
             'items.*.sub_total_sebelum_ppn' => 'nullable|numeric',
@@ -297,49 +322,82 @@ class SalesInvoiceController extends Controller
             'items.*.catatan' => 'nullable|string',
         ]);
 
-
-        // Check if diskon faktur and PPN are set
-        if (!isset($data['diskon_faktur'])) {
-            $data['diskon_faktur'] = 0;
-        }
-        if (!isset($data['diskon_ppn'])) {
-            $data['diskon_ppn'] = 0;
-        }
+        $data['diskon_faktur'] = $data['diskon_faktur'] ?? 0;
+        $data['diskon_ppn']    = $data['diskon_ppn'] ?? 0;
 
         $items = $data['items'];
         unset($data['items']);
 
-        DB::transaction(function () use ($invoice, $data, $items) {
+        // simpan kode lama untuk menghapus stok lama dengan tepat
+        $originalKode = $invoice->getOriginal('kode');
+
+        DB::transaction(function () use ($invoice, $data, $items, $originalKode) {
+
+            // Cek apakah faktur ini ada retur
+            if ($invoice->retur()->exists()) {
+                throw ValidationException::withMessages([
+                    'error' => 'Faktur ini sudah memiliki retur. Silakan hapus retur terlebih dahulu sebelum mengubah faktur.'
+                ]);
+            }
+            if ($invoice->paymentItems()->exists()) {
+                throw ValidationException::withMessages(['error' => 'Faktur sudah memiliki pembayaran. Batalkan pembayaran terlebih dahulu.']);
+            }
+
+            // ✅ Update header sekali saja
             $invoice->update($data + ['user_id' => auth()->id()]);
 
-            // 1. Hapus semua invoice items lama dan stok out lama terkait faktur ini
-            $oldItems = $invoice->items;
+            // 1) Hapus stok 'out' lama (pakai kode LAMA & LIKE agar kebal perubahan catatan item)
+            $oldItems = $invoice->items()->with(['product'])->get(); // ambil dulu sebelum delete
+            $oldStockTimes = [];
             foreach ($oldItems as $old) {
-                // Hapus stok 'out' pada kombinasi yang sama (opsional: tambah invoice_id di tabel stok untuk lebih akurat)
-                Stock::where([
-                    'product_id'      => $old->product_id,
-                    'type'            => 'out',
-                    'no_seri'         => $old->no_seri,
-                    'tanggal_expired' => $old->tanggal_expired,
-                ])->delete();
-                // Setelah delete, update sisa stok per batch
+                $stocks = Stock::where('product_id', $old->product_id)
+                    ->where('type', 'out')
+                    // ->when($old->no_seri, fn($q) => $q->where('no_seri', $old->no_seri))
+                    // ->when($old->tanggal_expired, fn($q) => $q->where('tanggal_expired', $old->tanggal_expired))
+                    ->where('catatan', 'like', "Penjualan (Faktur: {$originalKode})%")
+                    ->get(['id','created_at']);
+
+                foreach ($stocks as $s) {
+                    $key = "{$old->product_id}";
+                    // keep the earliest created_at per batch
+                    $oldStockTimes[$key] = isset($oldStockTimes[$key])
+                        ? min($oldStockTimes[$key], $s->created_at)
+                        : $s->created_at;
+                }
+
+                 $query = Stock::where('product_id', $old->product_id)
+                    ->where('type', 'out')
+                    ->where(function ($q) use ($old) {
+                        // filter batch bila ada
+                        // $q->when($old->no_seri, fn($qq) => $qq->where('no_seri', $old->no_seri))
+                        // ->when($old->tanggal_expired, fn($qq) => $qq->where('tanggal_expired', $old->tanggal_expired));
+                    })
+                    ->where('catatan', 'like', "Penjualan (Faktur: {$originalKode})%");
+
+                $query->delete();
+
+                // recompute sisa stok per-batch
                 self::updateAllSisaStok($old->product_id, $old->no_seri, $old->tanggal_expired);
             }
+
+            // 2) Hapus item lama
             $invoice->items()->delete();
 
-            // 2. Update header
-            $invoice->update($data);
-
-            // 3. Buat item baru dan stok keluar baru
+            // 3) Tambah item baru + stok 'out' baru
             foreach ($items as $item) {
-                $sisa = $this->getSisaStokBatch($item['product_id'],  $item['no_seri'] ?? null, $item['tanggal_expired'] ?? null);
+                // ✅ Kunci baris saat hitung sisa untuk hindari race condition
+                // (pakai sum ter-lock dengan cara ambil baris lalu aggregate manual)
+                $sisa = self::getSisaStokBatch($item['product_id'], $item['no_seri'] ?? null, $item['tanggal_expired'] ?? null, true);
+
                 if ($item['qty'] > $sisa) {
                     throw \Illuminate\Validation\ValidationException::withMessages([
-                        "items.*.qty" => "Stok tidak cukup untuk produk {$item['product_id']} di lokasi/seri/expired yang dipilih. Sisa: $sisa"
+                        "items.*.qty" => "Stok tidak cukup untuk produk {$item['product_id']} di seri/expired yang dipilih. Sisa: $sisa"
                     ]);
                 }
 
-                $invoice->items()->create($item);
+                $key = "{$item['product_id']}";
+                $createdAt = $oldStockTimes[$key] ?? $invoice->created_at; // fallback
+                $invoiceItem = $invoice->items()->create($item);
 
                 Stock::create([
                     'product_id'       => $item['product_id'],
@@ -350,7 +408,9 @@ class SalesInvoiceController extends Controller
                     'harga_net'        => $item['harga_satuan'],
                     'catatan'          => "Penjualan (Faktur: {$invoice->kode})" . (isset($item['catatan']) ? " - {$item['catatan']}" : ''),
                     'sisa_stok'        => 0,
+                    'created_at'       => $createdAt, // pakai waktu lama untuk konsistensi
                 ]);
+
                 self::updateAllSisaStok($item['product_id'], $item['no_seri'] ?? null, $item['tanggal_expired'] ?? null);
             }
         });
@@ -358,8 +418,22 @@ class SalesInvoiceController extends Controller
         return redirect()->route('sales.invoices.index')->with('success', 'Faktur penjualan berhasil diupdate.');
     }
 
+
     public function destroy(SalesInvoice $invoice)
     {
+        // Hapus stok 'out' terkait
+       $items = $invoice->items()->with(['product'])->get();
+        foreach ($items as $item) {
+            $stocks = Stock::where('product_id', $item->product_id)
+                ->where('type', 'out')
+                // ->when($item->no_seri, fn($q) => $q->where('no_seri', $item->no_seri))
+                // ->when($item->tanggal_expired, fn($q) => $q->where('tanggal_expired', $item->tanggal_expired))
+                ->where('catatan', 'like', "Penjualan (Faktur: {$invoice->kode})%")
+                ->delete(); 
+            // recompute sisa stok per-batch
+            self::updateAllSisaStok($item->product_id, $item->no_seri, $item->tanggal_expired);
+        }
+       
         //Hapus semua item terkait
         $invoice->items()->delete();
         //Hapus faktur
@@ -384,15 +458,18 @@ class SalesInvoiceController extends Controller
         return $in - $out - $destroy;
     }
 
-    private function getSisaStokBatch($product_id, $no_seri = null, $tanggal_expired = null)
+    private function getSisaStokBatch($product_id, $no_seri = null, $tanggal_expired = null, $lock = false)
     {
         $q = Stock::where('product_id', $product_id);
-        // if ($no_seri) $q->where('no_seri', $no_seri);
-        // if ($tanggal_expired) $q->where('tanggal_expired', $tanggal_expired);
+        // ->when($no_seri, fn($qq) => $qq->where('no_seri', $no_seri))
+        // ->when($tanggal_expired, fn($qq) => $qq->where('tanggal_expired', $tanggal_expired));
 
-        $in     = (clone $q)->where('type', 'in')->sum('jumlah');
-        $out    = (clone $q)->where('type', 'out')->sum('jumlah');
-        $destroy = (clone $q)->where('type', 'destroy')->sum('jumlah');
+        if ($lock) $q->lockForUpdate();
+
+        $rows = $q->get(); // biar konsisten saat lock
+        $in = $rows->where('type','in')->sum('jumlah');
+        $out = $rows->where('type','out')->sum('jumlah');
+        $destroy = $rows->where('type','destroy')->sum('jumlah');
         return $in - $out - $destroy;
     }
 
@@ -401,19 +478,19 @@ class SalesInvoiceController extends Controller
      */
     public static function updateAllSisaStok($product_id, $no_seri = null, $tanggal_expired = null)
     {
-        $query = Stock::query()
-            ->where('product_id', $product_id);
-        // if ($no_seri) $query->where('no_seri', $no_seri);
-        // if ($tanggal_expired) $query->where('tanggal_expired', $tanggal_expired);
+       $query = Stock::query()
+        ->where('product_id', $product_id);
+        // ->when($no_seri, fn($qq) => $qq->where('no_seri', $no_seri))
+        // ->when($tanggal_expired, fn($qq) => $qq->where('tanggal_expired', $tanggal_expired));
 
-        $stocks = $query->orderBy('id')->get();
+        $stocks = $query->orderBy('id')->lockForUpdate()->get();
         $runningSisa = 0;
         foreach ($stocks as $stock) {
-            if ($stock->type === 'in')      $runningSisa += $stock->jumlah;
-            elseif ($stock->type === 'out' || $stock->type === 'destroy') $runningSisa -= $stock->jumlah;
+            if ($stock->type === 'in') $runningSisa += $stock->jumlah;
+            elseif (in_array($stock->type, ['out','destroy'])) $runningSisa -= $stock->jumlah;
 
             $stock->sisa_stok = $runningSisa;
-            $stock->subtotal = $stock->jumlah * $stock->harga_net; // Update sub_total
+            $stock->subtotal = $stock->jumlah * $stock->harga_net;
             $stock->save();
         }
     }

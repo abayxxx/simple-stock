@@ -47,6 +47,11 @@ class PurchasesInvoice extends Model
     return $this->hasMany(PurchasesPaymentItem::class, 'purchases_invoice_id');
     }
 
+    public function retur()
+    {
+        return $this->hasMany(PurchasesReturn::class, 'purchases_invoice_id');
+    }
+
     public function latestPayment()
     {
         return $this->hasOneThrough(

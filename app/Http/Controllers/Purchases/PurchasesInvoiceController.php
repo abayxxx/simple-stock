@@ -12,6 +12,7 @@ use App\Models\CompanyProfile;
 use App\Models\Stock;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Yajra\DataTables\Facades\DataTables;
 
 class PurchasesInvoiceController extends Controller
@@ -156,8 +157,35 @@ class PurchasesInvoiceController extends Controller
         $items = $data['items'];
         unset($data['items']);
 
-        DB::transaction(function () use ($data, $items) {
-            $invoice = PurchasesInvoice::create($data + ['user_id' => auth()->id()]);
+        DB::transaction(function () use (&$invoice,$data, $items) {
+            $subtotal = 0;
+            foreach ($items as $it) {
+                $line = (float)$it['qty'] * (float)$it['harga_satuan'];
+                $p1 = $it['diskon_1_persen'] ?? 0; if ($p1) $line -= $line * ($p1/100);
+                $p2 = $it['diskon_2_persen'] ?? 0; if ($p2) $line -= $line * ($p2/100);
+                $p3 = $it['diskon_3_persen'] ?? 0; if ($p3) $line -= $line * ($p3/100);
+                $r1 = $it['diskon_1_rupiah'] ?? 0; $line -= $r1;
+                $r2 = $it['diskon_2_rupiah'] ?? 0; $line -= $r2;
+                $r3 = $it['diskon_3_rupiah'] ?? 0; $line -= $r3;
+                if ($line < 0) $line = 0;
+                $subtotal += $line;
+            }
+
+            $grand = max(0, $subtotal - ($data['diskon_faktur'] ?? 0));
+            if (!empty($data['diskon_ppn'])) {
+                $grand += $grand * ($data['diskon_ppn'] / 100);
+            }
+
+            $header = $data + [
+                'subtotal'     => $subtotal,
+                'grand_total'  => $grand,
+                'total_retur'  => 0,
+                'total_bayar'  => 0,
+                'sisa_tagihan' => $grand,
+                'user_id'      => auth()->id(),
+            ];
+
+            $invoice = PurchasesInvoice::create($header);
             foreach ($items as $item) {
 
                 // Create purchases invoice item
@@ -171,7 +199,7 @@ class PurchasesInvoiceController extends Controller
                     'no_seri'         => $item['no_seri'] ?? null,
                     'tanggal_expired' => $item['tanggal_expired'] ?? null,
                     'harga_net'       => $item['harga_satuan'],
-                    'catatan'         => "Pembelian (Invoice: {$invoice->kode})" . (isset($item['catatan']) ? " - {$item['catatan']}" : ''),
+                    'catatan'         => "Pembelian (Faktur: {$invoice->kode})" . (isset($item['catatan']) ? " - {$item['catatan']}" : ''),
                     'sisa_stok'       => 0 // Can be updated after as needed
                 ]);
                 // 4. Update sisa stok untuk batch ini
@@ -251,34 +279,69 @@ class PurchasesInvoiceController extends Controller
         $items = $data['items'];
         unset($data['items']);
 
-        DB::transaction(function () use ($invoice, $data, $items) {
+        $originalKode = $invoice->getOriginal('kode');
 
-            // Update Auth user
+
+        DB::transaction(function () use ($invoice, $data, $items, $originalKode) {
+
+              // Cek apakah faktur ini ada retur
+            if ($invoice->retur()->exists()) {
+                throw ValidationException::withMessages([
+                    'error' => 'Faktur ini sudah memiliki retur. Silakan hapus retur terlebih dahulu sebelum mengubah faktur.'
+                ]);
+            }
+            if ($invoice->paymentItems()->exists()) {
+                throw ValidationException::withMessages(['error' => 'Faktur sudah memiliki pembayaran. Batalkan pembayaran terlebih dahulu.']);
+            }
+
+            // ✅ Update header sekali saja
             $invoice->update($data + ['user_id' => auth()->id()]);
 
 
-            // 1. Hapus semua invoice items lama dan stok out lama terkait faktur ini
-            $oldItems = $invoice->items;
+             // 1) Hapus stok 'in' lama (pakai kode LAMA & LIKE agar kebal perubahan catatan item)
+            $oldItems = $invoice->items()->with(['product'])->get(); // ambil dulu sebelum delete
+            $oldStockTimes = [];
             foreach ($oldItems as $old) {
-                // Hapus stok 'in' pada kombinasi yang sama (opsional: tambah invoice_id di tabel stok untuk lebih akurat)
-                Stock::where([
-                    'product_id'      => $old->product_id,
-                    'type'            => 'in',
-                    'no_seri'         => $old->no_seri,
-                    'tanggal_expired' => $old->tanggal_expired,
-                ])->delete();
-                // Setelah delete, update sisa stok per batch
+                $stocks = Stock::where('product_id', $old->product_id)
+                    ->where('type', 'in')
+                    // ->when($old->no_seri, fn($q) => $q->where('no_seri', $old->no_seri))
+                    // ->when($old->tanggal_expired, fn($q) => $q->where('tanggal_expired', $old->tanggal_expired))
+                    ->where('catatan', 'like', "Pembelian (Faktur: {$originalKode})%")
+                    ->get(['id','created_at']);
+
+                foreach ($stocks as $s) {
+                    $key = "{$old->product_id}";
+                    // keep the earliest created_at per batch
+                    $oldStockTimes[$key] = isset($oldStockTimes[$key])
+                        ? min($oldStockTimes[$key], $s->created_at)
+                        : $s->created_at;
+                }
+
+                 $query = Stock::where('product_id', $old->product_id)
+                    ->where('type', 'in')
+                    ->where(function ($q) use ($old) {
+                        // filter batch bila ada
+                        // $q->when($old->no_seri, fn($qq) => $qq->where('no_seri', $old->no_seri))
+                        // ->when($old->tanggal_expired, fn($qq) => $qq->where('tanggal_expired', $old->tanggal_expired));
+                    })
+                    ->where('catatan', 'like', "Pembelian (Faktur: {$originalKode})%");
+
+                $query->delete();
+
+                // recompute sisa stok per-batch
                 self::updateAllSisaStok($old->product_id, $old->no_seri, $old->tanggal_expired);
             }
+
+            // 2) Hapus semua item lama
             $invoice->items()->delete();
 
-            // 2. Update header
-            $invoice->update($data);
-
-            // 3. Buat item baru dan stok masuk baru
+    
+            // 3) Tambah item baru + stok 'in' baru
             foreach ($items as $item) {
 
-                $invoice->items()->create($item);
+                $key = "{$item['product_id']}";
+                $createdAt = $oldStockTimes[$key] ?? $invoice->created_at; // fallback
+                $invoiceItem = $invoice->items()->create($item);
 
                 Stock::create([
                     'product_id'       => $item['product_id'],
@@ -289,6 +352,7 @@ class PurchasesInvoiceController extends Controller
                     'harga_net'        => $item['harga_satuan'],
                     'catatan'          => "Pembelian (Faktur: {$invoice->kode})" . (isset($item['catatan']) ? " - {$item['catatan']}" : ''),
                     'sisa_stok'        => 0,
+                    'created_at'       => $createdAt, // pakai waktu lama untuk konsistensi
                 ]);
                 self::updateAllSisaStok($item['product_id'], $item['no_seri'] ?? null, $item['tanggal_expired'] ?? null);
             }
@@ -299,6 +363,19 @@ class PurchasesInvoiceController extends Controller
 
     public function destroy(PurchasesInvoice $invoice)
     {
+
+        // Hapus stok 'in' terkait
+       $items = $invoice->items()->with(['product'])->get();
+        foreach ($items as $item) {
+            $stocks = Stock::where('product_id', $item->product_id)
+                ->where('type', 'in')
+                // ->when($item->no_seri, fn($q) => $q->where('no_seri', $item->no_seri))
+                // ->when($item->tanggal_expired, fn($q) => $q->where('tanggal_expired', $item->tanggal_expired))
+                ->where('catatan', 'like', "Pembelian (Faktur: {$invoice->kode})%")
+                ->delete(); 
+            // recompute sisa stok per-batch
+            self::updateAllSisaStok($item->product_id, $item->no_seri, $item->tanggal_expired);
+        }
         //Hapus semua item terkait
         $invoice->items()->delete();
         //Hapus faktur
@@ -323,37 +400,39 @@ class PurchasesInvoiceController extends Controller
         return $in - $out - $destroy;
     }
 
-    private function getSisaStokBatch($product_id, $no_seri = null, $tanggal_expired = null)
+   private function getSisaStokBatch($product_id, $no_seri = null, $tanggal_expired = null, $lock = false)
     {
         $q = Stock::where('product_id', $product_id);
-        // if ($no_seri) $q->where('no_seri', $no_seri);
-        // if ($tanggal_expired) $q->where('tanggal_expired', $tanggal_expired);
+        // ->when($no_seri, fn($qq) => $qq->where('no_seri', $no_seri))
+        // ->when($tanggal_expired, fn($qq) => $qq->where('tanggal_expired', $tanggal_expired));
 
-        $in     = (clone $q)->where('type', 'in')->sum('jumlah');
-        $out    = (clone $q)->where('type', 'out')->sum('jumlah');
-        $destroy = (clone $q)->where('type', 'destroy')->sum('jumlah');
+        if ($lock) $q->lockForUpdate();
+
+        $rows = $q->get(); // biar konsisten saat lock
+        $in = $rows->where('type','in')->sum('jumlah');
+        $out = $rows->where('type','out')->sum('jumlah');
+        $destroy = $rows->where('type','destroy')->sum('jumlah');
         return $in - $out - $destroy;
     }
 
     /**
      * Update semua sisa_stok di tabel Stock untuk 1 batch
      */
-    public static function updateAllSisaStok($product_id, $no_seri = null, $tanggal_expired = null)
+     public static function updateAllSisaStok($product_id, $no_seri = null, $tanggal_expired = null)
     {
-        $query = Stock::query()
-            ->where('product_id', $product_id);
-        // if ($no_seri) $query->where('no_seri', $no_seri);
-        // if ($tanggal_expired) $query->where('tanggal_expired', $tanggal_expired);
+       $query = Stock::query()
+        ->where('product_id', $product_id);
+        // ->when($no_seri, fn($qq) => $qq->where('no_seri', $no_seri))
+        // ->when($tanggal_expired, fn($qq) => $qq->where('tanggal_expired', $tanggal_expired));
 
-        $stocks = $query->orderBy('id')->get();
+        $stocks = $query->orderBy('id')->lockForUpdate()->get();
         $runningSisa = 0;
-        $subTotal = 0;
         foreach ($stocks as $stock) {
-            if ($stock->type === 'in')      $runningSisa += $stock->jumlah;
-            elseif ($stock->type === 'out' || $stock->type === 'destroy') $runningSisa -= $stock->jumlah;
+            if ($stock->type === 'in') $runningSisa += $stock->jumlah;
+            elseif (in_array($stock->type, ['out','destroy'])) $runningSisa -= $stock->jumlah;
 
             $stock->sisa_stok = $runningSisa;
-            $stock->subtotal = $stock->jumlah * $stock->harga_net; // Update sub_total
+            $stock->subtotal = $stock->jumlah * $stock->harga_net;
             $stock->save();
         }
     }

@@ -71,6 +71,12 @@ class SalesInvoice extends Model
     return $this->hasMany(SalesPaymentItem::class, 'sales_invoice_id');
     }
 
+    // Relasi ke retur
+    public function retur()
+    {
+        return $this->hasMany(SalesReturn::class, 'sales_invoice_id');
+    }
+
     public function latestPayment()
     {
         return $this->hasOneThrough(

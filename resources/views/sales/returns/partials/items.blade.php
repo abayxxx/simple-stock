@@ -498,7 +498,7 @@ $existingItems = old('items', isset($return) ? $return->items->toArray() : []);
         let lokasi_id = $('#add-lokasi_id').val();
         if (product_id) {
             $.get("{{ url('admin/stocks/get-sisa-stok') }}/" + product_id + "?lokasi_id=" + lokasi_id, function(res) {
-                $('#add-sisa_stok').val(Number(res) - Number($('#add-qty').val() || 0));
+                $('#add-sisa_stok').val(Number(res) + Number($('#add-qty').val() || 0));
             });
         } else {
             $('#add-sisa_stok').val(0);

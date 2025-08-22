@@ -483,6 +483,18 @@ $(function() {
             updateSummary();
         });
 
+        $('#add-product_id, #add-lokasi_id, #add-qty').on('change input', function() {
+        let product_id = $('#add-product_id').val();
+        let lokasi_id = $('#add-lokasi_id').val();
+        if (product_id) {
+            $.get("{{ url('admin/stocks/get-sisa-stok') }}/" + product_id + "?lokasi_id=" + lokasi_id, function(res) {
+                $('#add-sisa_stok').val(Number(res) - Number($('#add-qty').val() || 0));
+            });
+        } else {
+            $('#add-sisa_stok').val(0);
+        }
+    });
+
     // --- Block form submit if no item
     $('form').on('submit', function(e) {
         if ($('#review-items-table tbody tr').length === 0) {

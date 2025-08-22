@@ -54,7 +54,7 @@
             <select id="add-lokasi_id" class="form-control select-lokasi" name="lokasi_id">
                 <option value="">-- Pilih Lokasi --</option>
                 @foreach($branches as $b)
-                <option value="{{ $b->id }}">{{ $b->name }}</option>
+                <option value="{{ $b->id }}" {{ old('lokasi_id', $invoice->lokasi_id ?? '') == $b->id ? 'selected' : '' }}>{{ $b->name }}</option>
                 @endforeach
             </select>
         </div>

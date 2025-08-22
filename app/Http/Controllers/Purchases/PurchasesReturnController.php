@@ -231,29 +231,64 @@ class PurchasesReturnController extends Controller
         $items = $data['items'];
         unset($data['items']);
 
-        DB::transaction(function () use ($return, $data, $items) {
+        $originalKode = $return->getOriginal('kode');
+
+
+        DB::transaction(function () use ($return, $data, $items, $originalKode) {
+            // ✅ Update header sekali saja
             $return->update($data + ['user_id' => auth()->id()]);
 
-            // 1. Hapus item lama dan stok 'in' lama terkait retur ini
-            $oldItems = $return->items;
+            // 1) Hapus stok 'out' lama (pakai kode LAMA & LIKE agar kebal perubahan catatan item)
+            $oldItems = $return->items()->with(['product'])->get(); // ambil dulu sebelum delete
+            $oldStockTimes = [];
             foreach ($oldItems as $old) {
-                Stock::where([
-                    'product_id'      => $old->product_id,
-                    'type'            => 'out',
-                    'no_seri'         => $old->no_seri,
-                    'tanggal_expired' => $old->tanggal_expired,
-                    'harga_net'       => $old->harga_satuan,
-                ])->delete();
+                $stocks = Stock::where('product_id', $old->product_id)
+                    ->where('type', 'out')
+                    // ->when($old->no_seri, fn($q) => $q->where('no_seri', $old->no_seri))
+                    // ->when($old->tanggal_expired, fn($q) => $q->where('tanggal_expired', $old->tanggal_expired))
+                    ->where('catatan', 'like', "Retur Pembelian (Retur: {$originalKode})%")
+                    ->get(['id','created_at']);
+
+                foreach ($stocks as $s) {
+                    $key = "{$old->product_id}";
+                    // keep the earliest created_at per batch
+                    $oldStockTimes[$key] = isset($oldStockTimes[$key])
+                        ? min($oldStockTimes[$key], $s->created_at)
+                        : $s->created_at;
+                }
+
+                 $query = Stock::where('product_id', $old->product_id)
+                    ->where('type', 'out')
+                    ->where(function ($q) use ($old) {
+                        // filter batch bila ada
+                        // $q->when($old->no_seri, fn($qq) => $qq->where('no_seri', $old->no_seri))
+                        // ->when($old->tanggal_expired, fn($qq) => $qq->where('tanggal_expired', $old->tanggal_expired));
+                    })
+                    ->where('catatan', 'like', "Retur Pembelian (Retur: {$originalKode})%");
+
+                $query->delete();
+
+                // recompute sisa stok per-batch
                 self::updateAllSisaStok($old->product_id, $old->no_seri, $old->tanggal_expired);
             }
-            $return->items()->delete();
 
-            // 2. Update header
-            $return->update($data);
+            // 2) Hapus semua item lama
+            $return->items()->delete();
 
             // 3. Tambah item & stok out baru
             foreach ($items as $item) {
-                $return->items()->create($item);
+                 // ✅ Kunci baris saat hitung sisa untuk hindari race condition
+                // (pakai sum ter-lock dengan cara ambil baris lalu aggregate manual)
+                $sisa = self::getSisaStokBatch($item['product_id'], $item['no_seri'] ?? null, $item['tanggal_expired'] ?? null, true);
+
+                if ($item['qty'] > $sisa) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        "items.*.qty" => "Stok tidak cukup untuk produk {$item['product_id']} yang dipilih. Sisa: $sisa"
+                    ]);
+                }
+                 $key = "{$item['product_id']}";
+                $createdAt = $oldStockTimes[$key] ?? $return->created_at; // fallback
+                $returnItem = $return->items()->create($item);
 
                 Stock::create([
                     'product_id'       => $item['product_id'],
@@ -262,8 +297,9 @@ class PurchasesReturnController extends Controller
                     'no_seri'          => $item['no_seri'] ?? null,
                     'tanggal_expired'  => $item['tanggal_expired'] ?? null,
                     'harga_net'        => $item['harga_satuan'],
-                    'catatan'          => "Retur Pembelian (Update: {$return->kode})" . (isset($item['catatan']) ? " - {$item['catatan']}" : ''),
+                    'catatan'          => "Retur Pembelian (Retur: {$return->kode})" . (isset($item['catatan']) ? " - {$item['catatan']}" : ''),
                     'sisa_stok'        => 0,
+                    'created_at'       => $createdAt, // pakai waktu lama untuk konsistensi
                 ]);
                 self::updateAllSisaStok($item['product_id'], $item['no_seri'] ?? null, $item['tanggal_expired'] ?? null);
             }
@@ -287,15 +323,15 @@ class PurchasesReturnController extends Controller
     public function destroy(PurchasesReturn $return)
     {
         // Hapus semua item dan stok masuk terkait
-        $oldItems = $return->items;
+       $oldItems = $return->items;
+        $originalKode = $return->getOriginal('kode');
         foreach ($oldItems as $old) {
             Stock::where([
                 'product_id'      => $old->product_id,
-                'type'            => 'out',
-                'no_seri'         => $old->no_seri,
-                'tanggal_expired' => $old->tanggal_expired,
-                'harga_net'       => $old->harga_satuan,
-            ])->delete();
+                'type'            => 'in',
+            ])
+            ->where('catatan', 'like', "Retur Pembelian (Retur: {$originalKode})%")
+            ->delete();
             self::updateAllSisaStok($old->product_id, $old->no_seri, $old->tanggal_expired);
         }
 
@@ -324,15 +360,18 @@ class PurchasesReturnController extends Controller
     }
 
     /** Sisa stok per batch */
-    private function getSisaStokBatch($product_id, $no_seri = null, $tanggal_expired = null)
+    private function getSisaStokBatch($product_id, $no_seri = null, $tanggal_expired = null, $lock = false)
     {
         $q = Stock::where('product_id', $product_id);
-        // if ($no_seri) $q->where('no_seri', $no_seri);
-        // if ($tanggal_expired) $q->where('tanggal_expired', $tanggal_expired);
+        // ->when($no_seri, fn($qq) => $qq->where('no_seri', $no_seri))
+        // ->when($tanggal_expired, fn($qq) => $qq->where('tanggal_expired', $tanggal_expired));
 
-        $in     = (clone $q)->where('type', 'in')->sum('jumlah');
-        $out    = (clone $q)->where('type', 'out')->sum('jumlah');
-        $destroy = (clone $q)->where('type', 'destroy')->sum('jumlah');
+        if ($lock) $q->lockForUpdate();
+
+        $rows = $q->get(); // biar konsisten saat lock
+        $in = $rows->where('type','in')->sum('jumlah');
+        $out = $rows->where('type','out')->sum('jumlah');
+        $destroy = $rows->where('type','destroy')->sum('jumlah');
         return $in - $out - $destroy;
     }
 
@@ -342,18 +381,18 @@ class PurchasesReturnController extends Controller
     public static function updateAllSisaStok($product_id, $no_seri = null, $tanggal_expired = null)
     {
         $query = Stock::query()
-            ->where('product_id', $product_id);
-        if ($no_seri) $query->where('no_seri', $no_seri);
-        if ($tanggal_expired) $query->where('tanggal_expired', $tanggal_expired);
+        ->where('product_id', $product_id);
+        // ->when($no_seri, fn($qq) => $qq->where('no_seri', $no_seri))
+        // ->when($tanggal_expired, fn($qq) => $qq->where('tanggal_expired', $tanggal_expired));
 
-        $stocks = $query->orderBy('id')->get();
+        $stocks = $query->orderBy('id')->lockForUpdate()->get();
         $runningSisa = 0;
         foreach ($stocks as $stock) {
-            if ($stock->type === 'in')      $runningSisa += $stock->jumlah;
-            elseif ($stock->type === 'out' || $stock->type === 'destroy') $runningSisa -= $stock->jumlah;
+            if ($stock->type === 'in') $runningSisa += $stock->jumlah;
+            elseif (in_array($stock->type, ['out','destroy'])) $runningSisa -= $stock->jumlah;
 
             $stock->sisa_stok = $runningSisa;
-            $stock->subtotal = $stock->jumlah * $stock->harga_net; // Update sub_total
+            $stock->subtotal = $stock->jumlah * $stock->harga_net;
             $stock->save();
         }
     }

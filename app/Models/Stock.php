@@ -17,7 +17,8 @@ class Stock extends Model
         'subtotal',
         'catatan',
         'sisa_stok',
-        'type'
+        'type',
+        'created_at',
     ];
 
     // Relasi produk

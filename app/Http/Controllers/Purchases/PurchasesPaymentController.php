@@ -399,6 +399,9 @@ class PurchasesPaymentController extends Controller
 
             // Update invoice or return sisa_tagihan/grand_total (optional, add your logic here)
             foreach ($payment->items as $item) {
+                if (!$item->invoice && !$item->return) {
+                    continue; // Skip if no link
+                }
                 if ($item->tipe_nota === 'FAKTUR' && !empty($item->purchases_invoice_id)) {
                     $invoice = PurchasesInvoice::find($item->purchases_invoice_id);
                     $invoice->total_bayar -= ($item->sub_total - $item->retur);

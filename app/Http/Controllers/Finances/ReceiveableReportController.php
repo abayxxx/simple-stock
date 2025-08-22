@@ -20,7 +20,7 @@ class ReceiveableReportController extends Controller
             $customerSummary = SalesInvoice::select([
                     'company_profile_id',
                     DB::raw('SUM(grand_total) as total_debet'),
-                    DB::raw('SUM(total_bayar) as total_kredit'),
+                    DB::raw('SUM(total_bayar + total_retur) as total_kredit'),
                     DB::raw('SUM(sisa_tagihan) as total_sisa')
                 ])
                 ->with('customer')

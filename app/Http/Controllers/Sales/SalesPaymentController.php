@@ -401,6 +401,10 @@ class SalesPaymentController extends Controller
 
             // Update invoice or return sisa_tagihan/grand_total (optional, add your logic here)
             foreach ($payment->items as $item) {
+                //check if item still linked to invoice or return
+                if (!$item->invoice && !$item->return) {
+                    continue; // Skip if no link
+                }
                 if ($item->tipe_nota === 'FAKTUR' && !empty($item->sales_invoice_id)) {
                     $invoice = SalesInvoice::find($item->sales_invoice_id);
                     $invoice->total_bayar -= ($item->sub_total - $item->retur);
