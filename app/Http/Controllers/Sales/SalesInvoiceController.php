@@ -237,6 +237,7 @@ class SalesInvoiceController extends Controller
                     'harga_net'        => $item['harga_satuan'],
                     'catatan'          => "Penjualan (Faktur: {$invoice->kode})" . (isset($item['catatan']) ? " - {$item['catatan']}" : ''),
                     'sisa_stok'        => 0,
+                    'created_at'      => $invoice->tanggal, // Align with invoice time
                 ])->id;
 
                 self::updateAllSisaStok($item['product_id'], $item['no_seri'] ?? null, $item['tanggal_expired'] ?? null);
@@ -348,23 +349,8 @@ class SalesInvoiceController extends Controller
 
             // 1) Hapus stok 'out' lama (pakai kode LAMA & LIKE agar kebal perubahan catatan item)
             $oldItems = $invoice->items()->with(['product'])->get(); // ambil dulu sebelum delete
-            $oldStockTimes = [];
             foreach ($oldItems as $old) {
-                $stocks = Stock::where('product_id', $old->product_id)
-                    ->where('type', 'out')
-                    // ->when($old->no_seri, fn($q) => $q->where('no_seri', $old->no_seri))
-                    // ->when($old->tanggal_expired, fn($q) => $q->where('tanggal_expired', $old->tanggal_expired))
-                    ->where('catatan', 'like', "Penjualan (Faktur: {$originalKode})%")
-                    ->get(['id','created_at']);
-
-                foreach ($stocks as $s) {
-                    $key = "{$old->product_id}";
-                    // keep the earliest created_at per batch
-                    $oldStockTimes[$key] = isset($oldStockTimes[$key])
-                        ? min($oldStockTimes[$key], $s->created_at)
-                        : $s->created_at;
-                }
-
+               
                  $query = Stock::where('product_id', $old->product_id)
                     ->where('type', 'out')
                     ->where(function ($q) use ($old) {
@@ -396,7 +382,6 @@ class SalesInvoiceController extends Controller
                 }
 
                 $key = "{$item['product_id']}";
-                $createdAt = $oldStockTimes[$key] ?? $invoice->created_at; // fallback
                 $invoiceItem = $invoice->items()->create($item);
 
                 Stock::create([
@@ -408,7 +393,7 @@ class SalesInvoiceController extends Controller
                     'harga_net'        => $item['harga_satuan'],
                     'catatan'          => "Penjualan (Faktur: {$invoice->kode})" . (isset($item['catatan']) ? " - {$item['catatan']}" : ''),
                     'sisa_stok'        => 0,
-                    'created_at'       => $createdAt, // pakai waktu lama untuk konsistensi
+                    'created_at'       => $invoice->tanggal, // pakai waktu lama untuk konsistensi
                 ]);
 
                 self::updateAllSisaStok($item['product_id'], $item['no_seri'] ?? null, $item['tanggal_expired'] ?? null);

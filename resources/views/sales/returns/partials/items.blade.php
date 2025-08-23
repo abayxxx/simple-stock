@@ -148,6 +148,7 @@ $existingItems = old('items', isset($return) ? $return->items->toArray() : []);
 
         let itemIndex = 0;
         let products = @json(collect($products)->keyBy('id'));
+        let updating = false;
 
 
         // -- Restore existing items for edit/validation
@@ -277,6 +278,9 @@ $existingItems = old('items', isset($return) ? $return->items->toArray() : []);
                 $('#add-tanggal_expired').html('<option value="">-- Pilih Expired --</option>');
                 return;
             }
+
+            if (updating) return; // Skip if updating programmatically
+
             $.get("/admin/sales/returns/invoice-product-options/" + invoiceId + "/" + productId, function(res) {
                 let noSeriOpts = '<option value="">-- Pilih No Seri --</option>';
                 let tglExpOpts = '<option value="">-- Pilih Expired --</option>';
@@ -312,7 +316,7 @@ $existingItems = old('items', isset($return) ? $return->items->toArray() : []);
                 );
                 if (batch) {
                     $('#add-harga_satuan').val(batch.harga_satuan).trigger('input');
-                    $('.satuan-box').text(batch.satuan_kecil ? batch.satuan_kecil.toUpperCase() : 'Satuan');
+                    $('.satuan-box').text(batch.satuan ? batch.satuan.toUpperCase() : 'Satuan');
                     $('#add-qty').val(batch.qty || 1).trigger('input');
                     $('#add-sisa_stok').val(batch.sisa_stok || 0).trigger('input');
                     $('#add-sub_total_sblm_disc').val(batch.sub_total_sblm_disc || 0).trigger('input');
@@ -458,10 +462,17 @@ $existingItems = old('items', isset($return) ? $return->items->toArray() : []);
 
             // Prefill Select2 correctly
             const p = products[item.product_id] || { id: item.product_id, kode: '', nama: item.product_name || '', satuan_kecil: '' };
-            console.log('Editing item:', item, p, products);
+            updating = true;
             select2SetProduct($('#add-product_id'), p);
+            updating = false;
             // Fill form with item data
+            if ($("#add-no_seri option[value='" + item.no_seri + "']").length === 0) {
+            $("#add-no_seri").append(new Option(item.no_seri, item.no_seri, true, true));
+            }
             $('#add-no_seri').val(item.no_seri).trigger('change');
+            if ($("#add-tanggal_expired option[value='" + item.tanggal_expired + "']").length === 0) {
+            $("#add-tanggal_expired").append(new Option(item.tanggal_expired, item.tanggal_expired, true, true));
+            }
             $('#add-tanggal_expired').val(item.tanggal_expired).trigger('change');
             $('#add-qty').val(item.qty).trigger('input');
             $('#add-satuan').val(item.satuan);

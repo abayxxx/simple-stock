@@ -174,6 +174,19 @@ class SalesReturnController extends Controller
                     $invoice->sisa_tagihan = max(0, $invoice->grand_total  - $totalRetur);
                     $invoice->save();
                 }
+
+                // Update sales invoice items quantity
+                foreach ($items as $item) {
+                    $invItem = $invoice->items()->where('product_id', $item['product_id'])
+                        // ->where('no_seri', $item['no_seri'] ?? null)
+                        // ->where('tanggal_expired', $item['tanggal_expired'] ?? null)
+                        ->first();
+
+                    if ($invItem) {
+                        $invItem->qty = ($invItem->qty ?? 0) - $item['qty'];
+                        $invItem->save();
+                    }
+                }
             }
         }
 
@@ -242,8 +255,9 @@ class SalesReturnController extends Controller
 
         
         $originalKode = $return->getOriginal('kode');
+        $originalGrand = $return->getOriginal('grand_total'); 
 
-        DB::transaction(function () use ($return, $data, $items, $originalKode) {
+        DB::transaction(function () use ($return, $data, $items, $originalKode, $originalGrand) {
             // ✅ Update header sekali saja
             $return->update($data + ['user_id' => auth()->id()]);           
 
@@ -314,21 +328,79 @@ class SalesReturnController extends Controller
 
                 self::updateAllSisaStok($item['product_id'], $item['no_seri'] ?? null, $item['tanggal_expired'] ?? null);
             }
-        });
 
-        // 4. update sales invoice total_return and sisa_tagihan
-        if ($return->sales_invoice_id) {
-            $invoice = SalesInvoice::find($return->sales_invoice_id);
-            if ($invoice) {
-                // If invoice is locked, we cannot update it
-                if (!isSalesInvoiceLocked($invoice->id)) {
-                    $totalRetur = $return->grand_total;
-                    $invoice->total_retur = $totalRetur;
-                    $invoice->sisa_tagihan = max(0, $invoice->grand_total - $totalRetur);
+            $makeKey = function ($pid) {
+                // If you want batch-level accuracy, include seri/exp in the key.
+                // return "{$pid}||{$seri}||{$exp}";
+                return (string)$pid; // only by product_id
+            };
+
+            $oldAgg = [];
+            foreach ($oldItems as $it) {
+                $k = $makeKey($it->product_id);
+                $oldAgg[$k] = ($oldAgg[$k] ?? 0) + (float)$it->qty;
+            }
+
+            $newAgg = [];
+            foreach ($items as $it) {
+                $k = $makeKey($it['product_id']);
+                $newAgg[$k] = ($newAgg[$k] ?? 0) + (float)$it['qty'];
+            }
+            
+            // 4. update sales invoice total_return and sisa_tagihan
+            if ($return->sales_invoice_id) {
+                $invoice = SalesInvoice::lockForUpdate()->find($return->sales_invoice_id); // 👈 avoid races
+                if ($invoice && !isSalesInvoiceLocked($invoice->id)) {
+
+                    $delta = ($return->grand_total ?? 0) - ($originalGrand ?? 0); // 👈 ONLY the change
+
+                    if ($delta != 0) {
+                        $invoice->total_retur = max(0, ($invoice->total_retur ?? 0) + $delta);
+                    }
+
+                    // Recompute sisa_tagihan correctly (depends on your model fields)
+                    // If you track payments separately as total_bayar:
+                    $paid = $invoice->total_bayar ?? 0;
+                    $invoiceTotal = $invoice->grand_total ?? 0;
+                    $returTotal = $invoice->total_retur ?? 0;
+
+                    $invoice->sisa_tagihan = max(0, $invoiceTotal - $paid - $returTotal);
+
                     $invoice->save();
+
+                    $allKeys = array_unique(array_merge(array_keys($oldAgg), array_keys($newAgg)));
+                    foreach ($allKeys as $k) {
+                        $oldQty = (float)($oldAgg[$k] ?? 0);
+                        $newQty = (float)($newAgg[$k] ?? 0);
+                        $deltaQty = $newQty - $oldQty; // positive = more returned now
+
+                        if ($deltaQty == 0.0) continue;
+
+                        // resolve key back to product_id (and optionally seri/expired)
+                        // If you used the batch key, parse it here.
+                        $productId = (int)$k;
+
+                        $invItemQ = $invoice->items()->where('product_id', $productId);
+
+                        // If you want batch level matching, uncomment:
+                        // [$pid, $seri, $exp] = explode('||', $k);
+                        // $invItemQ->where(function ($q) use ($seri, $exp) {
+                        //     $q->where('no_seri', $seri)->where('tanggal_expired', $exp);
+                        // });
+
+                        $invItem = $invItemQ->lockForUpdate()->first();
+                        if ($invItem) {
+                            // Returned qty reduces sold qty; delta positive => subtract more
+                            $invItem->qty = max(0, (float)($invItem->qty ?? 0) - $deltaQty);
+                            $invItem->save();
+                        }
+                        // else: if invoice might not have a matching item, decide whether to create one or skip.
+                    }
                 }
             }
-        }
+        });
+
+        
 
         return redirect()->route('sales.returns.index')->with('success', 'Retur penjualan berhasil diupdate.');
     }
@@ -357,6 +429,18 @@ class SalesReturnController extends Controller
                     $invoice->total_retur -= $return->grand_total;
                     $invoice->sisa_tagihan = max(0, $invoice->sisa_tagihan + $return->grand_total);
                     $invoice->save();
+                }
+
+                // Update sales invoice items quantity
+                foreach ($return->items as $item) {
+                    $invItem = $invoice->items()->where('product_id', $item->product_id)
+                        // ->where('no_seri', $item->no_seri ?? null)
+                        // ->where('tanggal_expired', $item->tanggal_expired ?? null)
+                        ->first();  
+                    if ($invItem) {
+                        $invItem->qty = ($invItem->qty ?? 0) + $item->qty;
+                        $invItem->save();
+                    }
                 }
             }
         }
