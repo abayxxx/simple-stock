@@ -140,6 +140,11 @@ class SalesInvoiceController extends Controller
             'diskon_faktur' => 'nullable|numeric',
             'diskon_ppn' => 'nullable|numeric',
             'jatuh_tempo' => 'nullable|date',
+            'subtotal' => 'nullable|numeric',
+            'grand_total' => 'nullable|numeric',
+            'total_retur' => 'nullable|numeric',
+            'total_bayar' => 'nullable|numeric',
+            'sisa_tagihan' => 'nullable|numeric',
 
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|integer|exists:products,id',
