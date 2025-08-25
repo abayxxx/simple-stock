@@ -453,7 +453,6 @@ $(function() {
                 catatan: $tr.find('td:eq(17)').text()
             };
 
-            console.log('harga_satuan:', item.harga_satuan);
             // Prefill Select2 correctly
             const p = products[item.product_id] || { id: item.product_id, kode: '', nama: item.product_name || '', satuan_kecil: '' };
             updating = true; // Flag to prevent triggering change events
