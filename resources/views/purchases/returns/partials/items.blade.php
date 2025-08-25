@@ -453,6 +453,7 @@ $(function() {
                 catatan: $tr.find('td:eq(17)').text()
             };
 
+            console.log('harga_satuan:', item.harga_satuan);
             // Prefill Select2 correctly
             const p = products[item.product_id] || { id: item.product_id, kode: '', nama: item.product_name || '', satuan_kecil: '' };
             updating = true; // Flag to prevent triggering change events
@@ -466,6 +467,8 @@ $(function() {
             if ($("#add-tanggal_expired option[value='" + item.tanggal_expired + "']").length === 0) {
             $("#add-tanggal_expired").append(new Option(item.tanggal_expired, item.tanggal_expired, true, true));
             }
+            $('#add-no_seri').val(item.no_seri).trigger('change');
+            $('#add-tanggal_expired').val(item.tanggal_expired).trigger('change');
             $('#add-qty').val(item.qty).trigger('input');
             $('#add-satuan').val(item.satuan);
             $('.satuan-box').text(item.satuan ? item.satuan.toUpperCase() : 'Satuan');
