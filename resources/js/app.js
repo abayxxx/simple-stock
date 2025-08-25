@@ -1,11 +1,10 @@
-import './bootstrap';
-import { select2SetProduct, numberFormat } from './helper';
-
-import Alpine from 'alpinejs';
+import "./bootstrap";
+import Alpine from "alpinejs";
+import { select2SetProduct, numberFormat } from "./helper";
+import "./numberFormatter";
 
 window.Alpine = Alpine;
-
-window.select2SetProduct = select2SetProduct; // make it global
-window.numberFormat = numberFormat; // make it global
+window.select2SetProduct = select2SetProduct;
+window.numberFormat = numberFormat;
 
 Alpine.start();

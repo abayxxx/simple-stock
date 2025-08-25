@@ -18,7 +18,7 @@ class ProductController extends Controller
 
     public function datatable()
     {
-        return DataTables::of(Product::query())
+        return DataTables::of(Product::query()->orderByDesc('created_at'))
             ->editColumn('hpp_bruto_kecil', fn($row) => number_format($row->hpp_bruto_kecil, 2, ',', '.'))
             ->editColumn('harga_umum', fn($row) => number_format($row->harga_umum, 2, ',', '.'))
             ->addColumn('aksi', function ($row) {

@@ -84,7 +84,7 @@ Route::middleware('auth')->group(function () {
             Route::get('product-options/{product}', [StockController::class, 'getProductOptions']);
 
             Route::get('{type}/export-excel', [StockController::class, 'export'])
-                ->whereIn('type', ['in','out','destroy'])
+                ->whereIn('type', ['in', 'out', 'destroy'])
                 ->name('stocks.export');
 
             Route::get('in', [StockController::class, 'indexIn'])->name('stock.in');
@@ -192,7 +192,7 @@ Route::middleware('auth')->group(function () {
             Route::get('payments/filter-options', [PurchasesPaymentController::class, 'filterOptions'])->name('payments.filter-options');
             Route::resource('payments', PurchasesPaymentController::class);
 
-                // *Detail*
+            // *Detail*
             Route::get('detail', [PurchasesDetailController::class, 'index'])->name('detail.index');
             Route::get('detail/data', [PurchasesDetailController::class, 'datatable'])->name('detail.data');
             Route::get('detail/export', [PurchasesDetailController::class, 'exportExcel'])->name('detail.export');
@@ -219,8 +219,12 @@ Route::middleware('auth')->group(function () {
 
         // *Finances*
         Route::group(['prefix' => 'finances', 'as' => 'finances.'], function () {
+            Route::get('receivables/export', [ReceiveableReportController::class, 'export'])
+                ->name('receivables.export');
             Route::get('receivables', [ReceiveableReportController::class, 'index'])->name('receivables.index');
 
+            Route::get('debt/export', [DebtReportController::class, 'export'])
+                ->name('debt.export');
             Route::get('debt', [DebtReportController::class, 'index'])->name('debt.index');
         });
     });

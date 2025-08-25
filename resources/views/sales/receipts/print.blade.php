@@ -10,11 +10,10 @@
         }
 
         .outer-border {
-            border: 2px solid #C9A93E;
+            /* border: 2px solid #C9A93E; */
             padding: 30px 28px 36px 28px;
             margin: 18px auto;
-            max-width: 950px;
-            min-height: 1200px;
+            min-height: 25cm;
         }
 
         .tt-title {
@@ -70,7 +69,7 @@
         }
 
         .big-total {
-            font-size: 1.18em;
+            font-size: 1.1em;
             font-weight: bold;
         }
 
@@ -80,6 +79,7 @@
             margin-top: 13px;
             margin-bottom: 8px;
             font-size: 13px;
+            height: 50px;
         }
 
         .tt-signature-table {
@@ -91,6 +91,10 @@
             min-height: 48px;
             height: 48px;
             vertical-align: bottom;
+        }
+
+        .tt-footer-table {
+            margin-top: 30px;
         }
 
         .tt-footer-table td {
@@ -111,9 +115,29 @@
                 margin: 0;
             }
 
+            /* Jadikan halaman fleksibel setinggi 1 page dan hitung padding secara benar */
             .outer-border {
+                /* override min-height yang lama supaya tidak memaksa tinggi tertentu */
+                min-height: 100vh;
+                /* 1 halaman penuh saat print */
+                box-sizing: border-box;
+                display: flex;
+                flex-direction: column;
                 margin: 0;
                 padding: 24px;
+                /* tetap seperti sebelumnya */
+            }
+
+            .content {
+                flex: 1 0 auto;
+                /* ruang isi di atas footer */
+            }
+
+            .footer-section {
+                margin-top: auto;
+                /* dorong footer ke bawah */
+                page-break-inside: avoid;
+                /* cegah pecah halaman di tengah footer */
             }
         }
     </style>
@@ -121,89 +145,64 @@
 
 <body>
     <div class="outer-border">
-        <div class="tt-title">TANDA TERIMA</div>
-        <table class="tt-info">
-            <tr>
-                <td style="width:65%">
-                    Telah diterima dari : <b>{{ $receipt->customer->name ?? '-' }}</b><br>
-                    {{ $receipt->customer->address ?? '' }}<br>
-                    {{ $receipt->customer->kota ?? '' }}
-                </td>
-                <td style="width:35%; text-align:right;">
-                    No. Tanda Terima : <b>{{ $receipt->kode }}</b>
-                </td>
-            </tr>
-        </table>
-        <div class="tt-faktur">
-            Faktur sebanyak {{ count($receipt->receiptItems) }} lembar, sebagai berikut:
-        </div>
-        <table class="bordered" width="100%">
-            <thead>
+        <div class="content">
+            <div class="tt-title">TANDA TERIMA</div>
+            <hr>
+            <table class="tt-info">
                 <tr>
-                    <th class="text-center" style="width:28px;">No.</th>
-                    <th class="text-center" style="width:110px;">No. Faktur</th>
-                    <th class="text-center" style="width:80px;">Tanggal</th>
-                    <th class="text-center" style="width:110px;">Total Faktur</th>
-                    <th class="text-center">Keterangan</th>
+                    <td style="width:65%"> Telah diterima dari : <b>{{ $receipt->customer->name ?? '-' }}</b><br> {{ $receipt->customer->address ?? '' }}<br> {{ $receipt->customer->kota ?? '' }} </td>
+                    <td style="width:35%; text-align:right;"> No. Tanda Terima : <b>{{ $receipt->kode }}</b> </td>
                 </tr>
-            </thead>
-            <tbody>
-                @php
-                $totalFaktur = 0;
-                $totalRetur = 0;
-                @endphp
-                @foreach($receipt->receiptItems as $i => $item)
+            </table>
+            <div class="tt-faktur"> Faktur sebanyak {{ count($receipt->receiptItems) }} lembar, sebagai berikut: </div>
+            <table class="bordered" width="100%">
+                <thead>
+                    <tr>
+                        <th class="text-center" style="width:28px;">No.</th>
+                        <th class="text-center" style="width:110px;">No. Faktur</th>
+                        <th class="text-center" style="width:80px;">Tanggal</th>
+                        <th class="text-center" style="width:110px;">Total Faktur</th>
+                        <th class="text-center">Keterangan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @php $totalFaktur = 0; $totalRetur = 0; @endphp
+                    @foreach($receipt->receiptItems as $i => $item)
+                    <tr>
+                        <td class="text-center">{{ $i+1 }}</td>
+                        <td class="text-center">{{ $item->invoice->kode ?? '-' }}</td>
+                        <td class="text-center"> {{ $item->invoice->tanggal ? \Carbon\Carbon::parse($item->invoice->tanggal)->format('d M Y') : '-' }} </td>
+                        <td class="text-right">Rp. {{ number_format($item->sisa_tagihan,0,',','.') }}</td>
+                        <td>{{ $item->keterangan }}</td>
+                    </tr>
+                    @php $totalFaktur += $item->total_faktur; $totalRetur += $item->total_retur; @endphp @endforeach
+
+                    <tr>
+                        <th colspan="3" class="text-right big-total">GRAND TOTAL</th>
+                        <th colspan="1" class="text-right big-total">Rp. {{ number_format($receipt->receiptItems->sum('sisa_tagihan'), 2, ',', '.') }}</th>
+                        <th></th>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="footer-section">
+            <div class="terbilang-box"> <b>Terbilang:</b> {{ ucfirst(terbilang($receipt->receiptItems->sum('sisa_tagihan'))) }} Rupiah. </div>
+            <table class="tt-footer-table" width="100%">
                 <tr>
-                    <td class="text-center">{{ $i+1 }}</td>
-                    <td class="text-center">{{ $item->invoice->kode ?? '-' }}</td>
-                    <td class="text-center">
-                        {{ $item->invoice->tanggal ? \Carbon\Carbon::parse($item->invoice->tanggal)->format('d M Y') : '-' }}
+                    <td style="width:64%;"> Kembali Tagih Tanggal : {{ $receipt->kembali_tagih_tanggal ? \Carbon\Carbon::parse($receipt->kembali_tagih_tanggal)->format('d M Y') : '____________________' }} </td>
+                </tr>
+            </table>
+            <table class="tt-signature-table" width="100%" style="margin-top:25px;">
+                <tr>
+                    <td class="text-center" style="width:50%;"> Medan, {{ \Carbon\Carbon::parse($receipt->tanggal)->format('d M Y') }}<br>
+                        <div class="signature-space"></div> <span class="signature-name"></span><br>
                     </td>
-                    <td class="text-right">Rp. {{ number_format($item->sisa_tagihan,0,',','.') }}</td>
-                    <td>{{ $item->keterangan }}</td>
+                    <td class="text-center" style="width:50%;"> Diterima Oleh:<br>
+                        <div class="signature-space"></div> <span class="signature-name"></span>
+                    </td>
                 </tr>
-                @php
-                $totalFaktur += $item->total_faktur;
-                $totalRetur += $item->total_retur;
-                @endphp
-                @endforeach
-
-                <tr>
-                    <th colspan="3" class="text-right big-total">GRAND TOTAL</th>
-                    <th colspan="1" class="text-right big-total">Rp. {{ number_format($receipt->receiptItems->sum('sisa_tagihan'), 2, ',', '.') }}</th>
-                    <th></th>
-                </tr>
-            </tbody>
-        </table>
-        <div class="terbilang-box">
-            <b>Terbilang:</b>
-            {{ ucfirst(terbilang($receipt->receiptItems->sum('sisa_tagihan'))) }} Rupiah.
+            </table>
         </div>
-        <table class="tt-footer-table" width="100%">
-            <tr>
-                <td style="width:64%;">
-                    Kembali Tagih Tanggal :
-                    {{ $receipt->kembali_tagih_tanggal ? \Carbon\Carbon::parse($receipt->kembali_tagih_tanggal)->format('d M Y') : '____________________' }}
-                </td>
-                <td class="text-right" style="width:36%;">
-                    Medan, {{ \Carbon\Carbon::parse($receipt->tanggal)->format('d M Y') }}
-                </td>
-            </tr>
-        </table>
-        <table class="tt-signature-table" width="100%" style="margin-top:35px;">
-            <tr>
-                <td class="text-center" style="width:50%;">
-                    <div class="signature-space"></div>
-                    <span class="signature-name"></span><br>
-                </td>
-
-                <td class="text-center" style="width:50%;">
-                    Diterima Oleh:<br>
-                    <div class="signature-space"></div>
-                    <span class="signature-name"></span>
-                </td>
-            </tr>
-        </table>
     </div>
     <script>
         window.print();

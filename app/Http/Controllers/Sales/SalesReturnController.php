@@ -89,7 +89,7 @@ class SalesReturnController extends Controller
             ->where('relationship', '!=', 'supplier') // Only customers, not suppliers
             ->get();
         $salesGroups = SalesGroup::orderBy('nama')->get();
-       
+
         $branches = CompanyBranch::orderBy('name')->get();
         $invoices = SalesInvoice::orderBy('tanggal', 'desc')->get();
 
@@ -158,6 +158,7 @@ class SalesReturnController extends Controller
                     'harga_net'        => $item['harga_satuan'],
                     'catatan'          => "Retur Penjualan (Retur: {$retur->kode})" . (isset($item['catatan']) ? " - {$item['catatan']}" : ''),
                     'sisa_stok'        => 0, // Akan diupdate setelah ini
+                    'created_at'       => $retur->tanggal . ' ' . now()->format('H:i:s'), // Align with return time
                 ]);
                 self::updateAllSisaStok($item['product_id'], $item['no_seri'] ?? null, $item['tanggal_expired'] ?? null);
             }
@@ -202,7 +203,7 @@ class SalesReturnController extends Controller
     public function edit(SalesReturn $return)
     {
         $customers = CompanyProfile::orderBy('name')
-            ->where('relationship', '!=','supplier')
+            ->where('relationship', '!=', 'supplier')
             ->get();
         $salesGroups = SalesGroup::orderBy('nama')->get();
         // load only products in purchases invoice
@@ -253,34 +254,19 @@ class SalesReturnController extends Controller
         $items = $data['items'];
         unset($data['items']);
 
-        
+
         $originalKode = $return->getOriginal('kode');
-        $originalGrand = $return->getOriginal('grand_total'); 
+        $originalGrand = $return->getOriginal('grand_total');
 
         DB::transaction(function () use ($return, $data, $items, $originalKode, $originalGrand) {
             // ✅ Update header sekali saja
-            $return->update($data + ['user_id' => auth()->id()]);           
+            $return->update($data + ['user_id' => auth()->id()]);
 
             // 1) Hapus stok 'out' lama (pakai kode LAMA & LIKE agar kebal perubahan catatan item)
             $oldItems = $return->items()->with(['product'])->get(); // ambil dulu sebelum delete
-            $oldStockTimes = [];
             foreach ($oldItems as $old) {
-                $stocks = Stock::where('product_id', $old->product_id)
-                    ->where('type', 'in')
-                    // ->when($old->no_seri, fn($q) => $q->where('no_seri', $old->no_seri))
-                    // ->when($old->tanggal_expired, fn($q) => $q->where('tanggal_expired', $old->tanggal_expired))
-                    ->where('catatan', 'like', "Retur Penjualan (Retur: {$originalKode})%")
-                    ->get(['id','created_at']);
 
-                foreach ($stocks as $s) {
-                    $key = "{$old->product_id}";
-                    // keep the earliest created_at per batch
-                    $oldStockTimes[$key] = isset($oldStockTimes[$key])
-                        ? min($oldStockTimes[$key], $s->created_at)
-                        : $s->created_at;
-                }
-
-                 $query = Stock::where('product_id', $old->product_id)
+                $query = Stock::where('product_id', $old->product_id)
                     ->where('type', 'in')
                     ->where(function ($q) use ($old) {
                         // filter batch bila ada
@@ -299,7 +285,7 @@ class SalesReturnController extends Controller
 
 
             // 3. Tambah item & stok in baru
-             foreach ($items as $item) {
+            foreach ($items as $item) {
                 // ✅ Kunci baris saat hitung sisa untuk hindari race condition
                 // (pakai sum ter-lock dengan cara ambil baris lalu aggregate manual)
                 $sisa = self::getSisaStokBatch($item['product_id'], $item['no_seri'] ?? null, $item['tanggal_expired'] ?? null, true);
@@ -311,7 +297,6 @@ class SalesReturnController extends Controller
                 }
 
                 $key = "{$item['product_id']}";
-                $createdAt = $oldStockTimes[$key] ?? $return->created_at; // fallback
                 $returnItem = $return->items()->create($item);
 
                 Stock::create([
@@ -323,7 +308,7 @@ class SalesReturnController extends Controller
                     'harga_net'        => $item['harga_satuan'],
                     'catatan'          => "Retur Penjualan (Retur: {$return->kode})" . (isset($item['catatan']) ? " - {$item['catatan']}" : ''),
                     'sisa_stok'        => 0,
-                    'created_at'       => $createdAt, // pakai waktu lama untuk konsistensi
+                    'created_at'       => $return->tanggal . ' ' . now()->format('H:i:s'), // Align with return time
                 ]);
 
                 self::updateAllSisaStok($item['product_id'], $item['no_seri'] ?? null, $item['tanggal_expired'] ?? null);
@@ -346,7 +331,7 @@ class SalesReturnController extends Controller
                 $k = $makeKey($it['product_id']);
                 $newAgg[$k] = ($newAgg[$k] ?? 0) + (float)$it['qty'];
             }
-            
+
             // 4. update sales invoice total_return and sisa_tagihan
             if ($return->sales_invoice_id) {
                 $invoice = SalesInvoice::lockForUpdate()->find($return->sales_invoice_id); // 👈 avoid races
@@ -400,7 +385,7 @@ class SalesReturnController extends Controller
             }
         });
 
-        
+
 
         return redirect()->route('sales.returns.index')->with('success', 'Retur penjualan berhasil diupdate.');
     }
@@ -415,8 +400,8 @@ class SalesReturnController extends Controller
                 'product_id'      => $old->product_id,
                 'type'            => 'in',
             ])
-            ->where('catatan', 'like', "Retur Penjualan (Retur: {$originalKode})%")
-            ->delete();
+                ->where('catatan', 'like', "Retur Penjualan (Retur: {$originalKode})%")
+                ->delete();
             self::updateAllSisaStok($old->product_id, $old->no_seri, $old->tanggal_expired);
         }
 
@@ -436,7 +421,7 @@ class SalesReturnController extends Controller
                     $invItem = $invoice->items()->where('product_id', $item->product_id)
                         // ->where('no_seri', $item->no_seri ?? null)
                         // ->where('tanggal_expired', $item->tanggal_expired ?? null)
-                        ->first();  
+                        ->first();
                     if ($invItem) {
                         $invItem->qty = ($invItem->qty ?? 0) + $item->qty;
                         $invItem->save();
@@ -460,7 +445,7 @@ class SalesReturnController extends Controller
     }
 
     /** Sisa stok per batch */
-     private function getSisaStokBatch($product_id, $no_seri = null, $tanggal_expired = null, $lock = false)
+    private function getSisaStokBatch($product_id, $no_seri = null, $tanggal_expired = null, $lock = false)
     {
         $q = Stock::where('product_id', $product_id);
         // ->when($no_seri, fn($qq) => $qq->where('no_seri', $no_seri))
@@ -469,9 +454,9 @@ class SalesReturnController extends Controller
         if ($lock) $q->lockForUpdate();
 
         $rows = $q->get(); // biar konsisten saat lock
-        $in = $rows->where('type','in')->sum('jumlah');
-        $out = $rows->where('type','out')->sum('jumlah');
-        $destroy = $rows->where('type','destroy')->sum('jumlah');
+        $in = $rows->where('type', 'in')->sum('jumlah');
+        $out = $rows->where('type', 'out')->sum('jumlah');
+        $destroy = $rows->where('type', 'destroy')->sum('jumlah');
         return $in - $out - $destroy;
     }
 
@@ -480,8 +465,8 @@ class SalesReturnController extends Controller
      */
     public static function updateAllSisaStok($product_id, $no_seri = null, $tanggal_expired = null)
     {
-       $query = Stock::query()
-        ->where('product_id', $product_id);
+        $query = Stock::query()
+            ->where('product_id', $product_id);
         // ->when($no_seri, fn($qq) => $qq->where('no_seri', $no_seri))
         // ->when($tanggal_expired, fn($qq) => $qq->where('tanggal_expired', $tanggal_expired));
 
@@ -489,7 +474,7 @@ class SalesReturnController extends Controller
         $runningSisa = 0;
         foreach ($stocks as $stock) {
             if ($stock->type === 'in') $runningSisa += $stock->jumlah;
-            elseif (in_array($stock->type, ['out','destroy'])) $runningSisa -= $stock->jumlah;
+            elseif (in_array($stock->type, ['out', 'destroy'])) $runningSisa -= $stock->jumlah;
 
             $stock->sisa_stok = $runningSisa;
             $stock->subtotal = $stock->jumlah * $stock->harga_net;

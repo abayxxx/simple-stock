@@ -3,12 +3,13 @@
 
 namespace App\Http\Controllers\Finances;
 
+use App\Exports\ReceivablesExport;
 use App\Models\SalesInvoice;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
 use App\Http\Controllers\Controller;
-
+use Maatwebsite\Excel\Facades\Excel;
 
 class ReceiveableReportController extends Controller
 {
@@ -18,11 +19,11 @@ class ReceiveableReportController extends Controller
 
         if ($request->ajax()) {
             $customerSummary = SalesInvoice::select([
-                    'company_profile_id',
-                    DB::raw('SUM(grand_total) as total_debet'),
-                    DB::raw('SUM(total_bayar + total_retur) as total_kredit'),
-                    DB::raw('SUM(sisa_tagihan) as total_sisa')
-                ])
+                'company_profile_id',
+                DB::raw('SUM(grand_total) as total_debet'),
+                DB::raw('SUM(total_bayar + total_retur) as total_kredit'),
+                DB::raw('SUM(sisa_tagihan) as total_sisa')
+            ])
                 ->with('customer')
                 // ->where('sisa_tagihan', '>', 0)
                 ->whereDate('tanggal', '<=', $date)
@@ -48,5 +49,11 @@ class ReceiveableReportController extends Controller
         }
 
         return view('finances.receivables.index', compact('date'));
+    }
+
+    public function export(Request $request)
+    {
+        $date = $request->get('tanggal', now()->toDateString());
+        return Excel::download(new ReceivablesExport($date), 'laporan_piutang_' . $date . '.xlsx');
     }
 }

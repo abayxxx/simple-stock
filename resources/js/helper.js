@@ -16,3 +16,5 @@ number = parseFloat(number);
   parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, thousandsSep);
   return parts.join(decPoint);
 }
+
+

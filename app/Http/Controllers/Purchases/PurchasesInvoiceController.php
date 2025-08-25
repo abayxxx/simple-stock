@@ -157,16 +157,22 @@ class PurchasesInvoiceController extends Controller
         $items = $data['items'];
         unset($data['items']);
 
-        DB::transaction(function () use (&$invoice,$data, $items) {
+        DB::transaction(function () use (&$invoice, $data, $items) {
             $subtotal = 0;
             foreach ($items as $it) {
                 $line = (float)$it['qty'] * (float)$it['harga_satuan'];
-                $p1 = $it['diskon_1_persen'] ?? 0; if ($p1) $line -= $line * ($p1/100);
-                $p2 = $it['diskon_2_persen'] ?? 0; if ($p2) $line -= $line * ($p2/100);
-                $p3 = $it['diskon_3_persen'] ?? 0; if ($p3) $line -= $line * ($p3/100);
-                $r1 = $it['diskon_1_rupiah'] ?? 0; $line -= $r1;
-                $r2 = $it['diskon_2_rupiah'] ?? 0; $line -= $r2;
-                $r3 = $it['diskon_3_rupiah'] ?? 0; $line -= $r3;
+                $p1 = $it['diskon_1_persen'] ?? 0;
+                if ($p1) $line -= $line * ($p1 / 100);
+                $p2 = $it['diskon_2_persen'] ?? 0;
+                if ($p2) $line -= $line * ($p2 / 100);
+                $p3 = $it['diskon_3_persen'] ?? 0;
+                if ($p3) $line -= $line * ($p3 / 100);
+                $r1 = $it['diskon_1_rupiah'] ?? 0;
+                $line -= $r1;
+                $r2 = $it['diskon_2_rupiah'] ?? 0;
+                $line -= $r2;
+                $r3 = $it['diskon_3_rupiah'] ?? 0;
+                $line -= $r3;
                 if ($line < 0) $line = 0;
                 $subtotal += $line;
             }
@@ -201,7 +207,7 @@ class PurchasesInvoiceController extends Controller
                     'harga_net'       => $item['harga_satuan'],
                     'catatan'         => "Pembelian (Faktur: {$invoice->kode})" . (isset($item['catatan']) ? " - {$item['catatan']}" : ''),
                     'sisa_stok'       => 0, // Can be updated after as needed
-                    'created_at'      => $invoice->tanggal, // Align with invoice time
+                    'created_at'      => $invoice->tanggal . ' ' . now()->format('H:i:s'), // Align with invoice time
                 ]);
                 // 4. Update sisa stok untuk batch ini
                 self::updateAllSisaStok($item['product_id'], $item['no_seri'] ?? null, $item['tanggal_expired'] ?? null);
@@ -285,7 +291,7 @@ class PurchasesInvoiceController extends Controller
 
         DB::transaction(function () use ($invoice, $data, $items, $originalKode) {
 
-              // Cek apakah faktur ini ada retur
+            // Cek apakah faktur ini ada retur
             if ($invoice->retur()->exists()) {
                 throw ValidationException::withMessages([
                     'error' => 'Faktur ini sudah memiliki retur. Silakan hapus retur terlebih dahulu sebelum mengubah faktur.'
@@ -299,11 +305,11 @@ class PurchasesInvoiceController extends Controller
             $invoice->update($data + ['user_id' => auth()->id()]);
 
 
-             // 1) Hapus stok 'in' lama (pakai kode LAMA & LIKE agar kebal perubahan catatan item)
+            // 1) Hapus stok 'in' lama (pakai kode LAMA & LIKE agar kebal perubahan catatan item)
             $oldItems = $invoice->items()->with(['product'])->get(); // ambil dulu sebelum delete
-           
+
             foreach ($oldItems as $old) {
-                 $query = Stock::where('product_id', $old->product_id)
+                $query = Stock::where('product_id', $old->product_id)
                     ->where('type', 'in')
                     ->where(function ($q) use ($old) {
                         // filter batch bila ada
@@ -321,7 +327,7 @@ class PurchasesInvoiceController extends Controller
             // 2) Hapus semua item lama
             $invoice->items()->delete();
 
-    
+
             // 3) Tambah item baru + stok 'in' baru
             foreach ($items as $item) {
 
@@ -337,7 +343,7 @@ class PurchasesInvoiceController extends Controller
                     'harga_net'        => $item['harga_satuan'],
                     'catatan'          => "Pembelian (Faktur: {$invoice->kode})" . (isset($item['catatan']) ? " - {$item['catatan']}" : ''),
                     'sisa_stok'        => 0,
-                    'created_at'       => $invoice->tanggal, // Align with invoice time
+                    'created_at'       => $invoice->tanggal . ' ' . now()->format('H:i:s'), // Align with invoice time
                 ]);
                 self::updateAllSisaStok($item['product_id'], $item['no_seri'] ?? null, $item['tanggal_expired'] ?? null);
             }
@@ -350,14 +356,14 @@ class PurchasesInvoiceController extends Controller
     {
 
         // Hapus stok 'in' terkait
-       $items = $invoice->items()->with(['product'])->get();
+        $items = $invoice->items()->with(['product'])->get();
         foreach ($items as $item) {
             $stocks = Stock::where('product_id', $item->product_id)
                 ->where('type', 'in')
                 // ->when($item->no_seri, fn($q) => $q->where('no_seri', $item->no_seri))
                 // ->when($item->tanggal_expired, fn($q) => $q->where('tanggal_expired', $item->tanggal_expired))
                 ->where('catatan', 'like', "Pembelian (Faktur: {$invoice->kode})%")
-                ->delete(); 
+                ->delete();
             // recompute sisa stok per-batch
             self::updateAllSisaStok($item->product_id, $item->no_seri, $item->tanggal_expired);
         }
@@ -385,7 +391,7 @@ class PurchasesInvoiceController extends Controller
         return $in - $out - $destroy;
     }
 
-   private function getSisaStokBatch($product_id, $no_seri = null, $tanggal_expired = null, $lock = false)
+    private function getSisaStokBatch($product_id, $no_seri = null, $tanggal_expired = null, $lock = false)
     {
         $q = Stock::where('product_id', $product_id);
         // ->when($no_seri, fn($qq) => $qq->where('no_seri', $no_seri))
@@ -394,19 +400,19 @@ class PurchasesInvoiceController extends Controller
         if ($lock) $q->lockForUpdate();
 
         $rows = $q->get(); // biar konsisten saat lock
-        $in = $rows->where('type','in')->sum('jumlah');
-        $out = $rows->where('type','out')->sum('jumlah');
-        $destroy = $rows->where('type','destroy')->sum('jumlah');
+        $in = $rows->where('type', 'in')->sum('jumlah');
+        $out = $rows->where('type', 'out')->sum('jumlah');
+        $destroy = $rows->where('type', 'destroy')->sum('jumlah');
         return $in - $out - $destroy;
     }
 
     /**
      * Update semua sisa_stok di tabel Stock untuk 1 batch
      */
-     public static function updateAllSisaStok($product_id, $no_seri = null, $tanggal_expired = null)
+    public static function updateAllSisaStok($product_id, $no_seri = null, $tanggal_expired = null)
     {
-       $query = Stock::query()
-        ->where('product_id', $product_id);
+        $query = Stock::query()
+            ->where('product_id', $product_id);
         // ->when($no_seri, fn($qq) => $qq->where('no_seri', $no_seri))
         // ->when($tanggal_expired, fn($qq) => $qq->where('tanggal_expired', $tanggal_expired));
 
@@ -414,7 +420,7 @@ class PurchasesInvoiceController extends Controller
         $runningSisa = 0;
         foreach ($stocks as $stock) {
             if ($stock->type === 'in') $runningSisa += $stock->jumlah;
-            elseif (in_array($stock->type, ['out','destroy'])) $runningSisa -= $stock->jumlah;
+            elseif (in_array($stock->type, ['out', 'destroy'])) $runningSisa -= $stock->jumlah;
 
             $stock->sisa_stok = $runningSisa;
             $stock->subtotal = $stock->jumlah * $stock->harga_net;

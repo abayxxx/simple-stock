@@ -80,7 +80,7 @@ class PurchasesReturnController extends Controller
         $suppliers = CompanyProfile::orderBy('name')
             ->where('relationship', '!=', 'customer')
             ->get();
-      
+
         $branches = CompanyBranch::orderBy('name')->get();
         $invoices = PurchasesInvoice::orderBy('tanggal', 'desc')->get();
         return view('purchases.returns.create', compact('suppliers', 'branches', 'invoices'));
@@ -147,6 +147,7 @@ class PurchasesReturnController extends Controller
                     'harga_net'        => $item['harga_satuan'],
                     'catatan'          => "Retur Pembelian (Retur: {$retur->kode})" . (isset($item['catatan']) ? " - {$item['catatan']}" : ''),
                     'sisa_stok'        => 0, // Akan diupdate setelah ini
+                    'created_at'       => $retur->tanggal . ' ' . now()->format('H:i:s'), // Align with return time
                 ]);
                 self::updateAllSisaStok($item['product_id'], $item['no_seri'] ?? null, $item['tanggal_expired'] ?? null);
             }
@@ -189,7 +190,7 @@ class PurchasesReturnController extends Controller
     public function edit(PurchasesReturn $return)
     {
         $suppliers = CompanyProfile::orderBy('name')
-            ->where('relationship','!=','customer')
+            ->where('relationship', '!=', 'customer')
             ->get();
         $products = Product::whereIn('id', $return->items->pluck('product_id'))->orderBy('nama')->get();
         $branches = CompanyBranch::orderBy('name')->get();
@@ -245,7 +246,7 @@ class PurchasesReturnController extends Controller
         unset($data['items']);
 
         $originalKode = $return->getOriginal('kode');
-        $originalGrand = $return->getOriginal('grand_total'); 
+        $originalGrand = $return->getOriginal('grand_total');
 
 
         DB::transaction(function () use ($return, $data, $items, $originalKode, $originalGrand) {
@@ -254,24 +255,8 @@ class PurchasesReturnController extends Controller
 
             // 1) Hapus stok 'out' lama (pakai kode LAMA & LIKE agar kebal perubahan catatan item)
             $oldItems = $return->items()->with(['product'])->get(); // ambil dulu sebelum delete
-            $oldStockTimes = [];
             foreach ($oldItems as $old) {
-                $stocks = Stock::where('product_id', $old->product_id)
-                    ->where('type', 'out')
-                    // ->when($old->no_seri, fn($q) => $q->where('no_seri', $old->no_seri))
-                    // ->when($old->tanggal_expired, fn($q) => $q->where('tanggal_expired', $old->tanggal_expired))
-                    ->where('catatan', 'like', "Retur Pembelian (Retur: {$originalKode})%")
-                    ->get(['id','created_at']);
-
-                foreach ($stocks as $s) {
-                    $key = "{$old->product_id}";
-                    // keep the earliest created_at per batch
-                    $oldStockTimes[$key] = isset($oldStockTimes[$key])
-                        ? min($oldStockTimes[$key], $s->created_at)
-                        : $s->created_at;
-                }
-
-                 $query = Stock::where('product_id', $old->product_id)
+                $query = Stock::where('product_id', $old->product_id)
                     ->where('type', 'out')
                     ->where(function ($q) use ($old) {
                         // filter batch bila ada
@@ -291,7 +276,7 @@ class PurchasesReturnController extends Controller
 
             // 3. Tambah item & stok out baru
             foreach ($items as $item) {
-                 // ✅ Kunci baris saat hitung sisa untuk hindari race condition
+                // ✅ Kunci baris saat hitung sisa untuk hindari race condition
                 // (pakai sum ter-lock dengan cara ambil baris lalu aggregate manual)
                 $sisa = self::getSisaStokBatch($item['product_id'], $item['no_seri'] ?? null, $item['tanggal_expired'] ?? null, true);
 
@@ -300,8 +285,8 @@ class PurchasesReturnController extends Controller
                         "items.*.qty" => "Stok tidak cukup untuk produk {$item['product_id']} yang dipilih. Sisa: $sisa"
                     ]);
                 }
-                 $key = "{$item['product_id']}";
-                $createdAt = $oldStockTimes[$key] ?? $return->created_at; // fallback
+                $key = "{$item['product_id']}";
+
                 $returnItem = $return->items()->create($item);
 
                 Stock::create([
@@ -313,7 +298,7 @@ class PurchasesReturnController extends Controller
                     'harga_net'        => $item['harga_satuan'],
                     'catatan'          => "Retur Pembelian (Retur: {$return->kode})" . (isset($item['catatan']) ? " - {$item['catatan']}" : ''),
                     'sisa_stok'        => 0,
-                    'created_at'       => $createdAt, // pakai waktu lama untuk konsistensi
+                    'created_at'       => $return->tanggal . ' ' . now()->format('H:i:s'), // Align with return time
                 ]);
                 self::updateAllSisaStok($item['product_id'], $item['no_seri'] ?? null, $item['tanggal_expired'] ?? null);
             }
@@ -336,76 +321,75 @@ class PurchasesReturnController extends Controller
                 $newAgg[$k] = ($newAgg[$k] ?? 0) + (float)$it['qty'];
             }
 
-        // 4. update purchase invoice total_return and sisa_tagihan
+            // 4. update purchase invoice total_return and sisa_tagihan
             if ($return->purchases_invoice_id) {
                 $invoice = PurchasesInvoice::lockForUpdate()->find($return->purchases_invoice_id); // 👈 avoid races
                 if ($invoice) {
 
-                        $delta = ($return->grand_total ?? 0) - ($originalGrand ?? 0); // 👈 ONLY the change
+                    $delta = ($return->grand_total ?? 0) - ($originalGrand ?? 0); // 👈 ONLY the change
 
-                        if ($delta != 0) {
-                            $invoice->total_retur = max(0, ($invoice->total_retur ?? 0) + $delta);
-                        }
-
-                        // Recompute sisa_tagihan correctly (depends on your model fields)
-                        // If you track payments separately as total_bayar:
-                        $paid = $invoice->total_bayar ?? 0;
-                        $invoiceTotal = $invoice->grand_total ?? 0;
-                        $returTotal = $invoice->total_retur ?? 0;
-
-                        $invoice->sisa_tagihan = max(0, $invoiceTotal - $paid - $returTotal);
-
-                        $invoice->save();
-
-                        $allKeys = array_unique(array_merge(array_keys($oldAgg), array_keys($newAgg)));
-                        foreach ($allKeys as $k) {
-                            $oldQty = (float)($oldAgg[$k] ?? 0);
-                            $newQty = (float)($newAgg[$k] ?? 0);
-                            $deltaQty = $newQty - $oldQty; // positive = more returned now
-
-                            if ($deltaQty == 0.0) continue;
-
-                            // resolve key back to product_id (and optionally seri/expired)
-                            // If you used the batch key, parse it here.
-                            $productId = (int)$k;
-
-                            $invItemQ = $invoice->items()->where('product_id', $productId);
-
-                            // If you want batch level matching, uncomment:
-                            // [$pid, $seri, $exp] = explode('||', $k);
-                            // $invItemQ->where(function ($q) use ($seri, $exp) {
-                            //     $q->where('no_seri', $seri)->where('tanggal_expired', $exp);
-                            // });
-
-                            $invItem = $invItemQ->lockForUpdate()->first();
-                            if ($invItem) {
-                                // Returned qty reduces sold qty; delta positive => subtract more
-                                $invItem->qty = max(0, (float)($invItem->qty ?? 0) - $deltaQty);
-                                $invItem->save();
-                            }
-                            // else: if invoice might not have a matching item, decide whether to create one or skip.
-                        }
+                    if ($delta != 0) {
+                        $invoice->total_retur = max(0, ($invoice->total_retur ?? 0) + $delta);
                     }
-            }
 
+                    // Recompute sisa_tagihan correctly (depends on your model fields)
+                    // If you track payments separately as total_bayar:
+                    $paid = $invoice->total_bayar ?? 0;
+                    $invoiceTotal = $invoice->grand_total ?? 0;
+                    $returTotal = $invoice->total_retur ?? 0;
+
+                    $invoice->sisa_tagihan = max(0, $invoiceTotal - $paid - $returTotal);
+
+                    $invoice->save();
+
+                    $allKeys = array_unique(array_merge(array_keys($oldAgg), array_keys($newAgg)));
+                    foreach ($allKeys as $k) {
+                        $oldQty = (float)($oldAgg[$k] ?? 0);
+                        $newQty = (float)($newAgg[$k] ?? 0);
+                        $deltaQty = $newQty - $oldQty; // positive = more returned now
+
+                        if ($deltaQty == 0.0) continue;
+
+                        // resolve key back to product_id (and optionally seri/expired)
+                        // If you used the batch key, parse it here.
+                        $productId = (int)$k;
+
+                        $invItemQ = $invoice->items()->where('product_id', $productId);
+
+                        // If you want batch level matching, uncomment:
+                        // [$pid, $seri, $exp] = explode('||', $k);
+                        // $invItemQ->where(function ($q) use ($seri, $exp) {
+                        //     $q->where('no_seri', $seri)->where('tanggal_expired', $exp);
+                        // });
+
+                        $invItem = $invItemQ->lockForUpdate()->first();
+                        if ($invItem) {
+                            // Returned qty reduces sold qty; delta positive => subtract more
+                            $invItem->qty = max(0, (float)($invItem->qty ?? 0) - $deltaQty);
+                            $invItem->save();
+                        }
+                        // else: if invoice might not have a matching item, decide whether to create one or skip.
+                    }
+                }
+            }
         });
 
-        
+
         return redirect()->route('purchases.returns.index')->with('success', 'Retur pembelian berhasil diupdate.');
     }
 
     public function destroy(PurchasesReturn $return)
     {
         // Hapus semua item dan stok masuk terkait
-       $oldItems = $return->items;
+        $oldItems = $return->items;
         $originalKode = $return->getOriginal('kode');
         foreach ($oldItems as $old) {
             Stock::where([
                 'product_id'      => $old->product_id,
                 'type'            => 'out',
             ])
-            ->where('catatan', 'like', "Retur Pembelian (Retur: {$originalKode})%")
-            ->delete();
+                ->where('catatan', 'like', "Retur Pembelian (Retur: {$originalKode})%")
+                ->delete();
             self::updateAllSisaStok($old->product_id, $old->no_seri, $old->tanggal_expired);
         }
 
@@ -443,9 +427,9 @@ class PurchasesReturnController extends Controller
         if ($lock) $q->lockForUpdate();
 
         $rows = $q->get(); // biar konsisten saat lock
-        $in = $rows->where('type','in')->sum('jumlah');
-        $out = $rows->where('type','out')->sum('jumlah');
-        $destroy = $rows->where('type','destroy')->sum('jumlah');
+        $in = $rows->where('type', 'in')->sum('jumlah');
+        $out = $rows->where('type', 'out')->sum('jumlah');
+        $destroy = $rows->where('type', 'destroy')->sum('jumlah');
         return $in - $out - $destroy;
     }
 
@@ -455,7 +439,7 @@ class PurchasesReturnController extends Controller
     public static function updateAllSisaStok($product_id, $no_seri = null, $tanggal_expired = null)
     {
         $query = Stock::query()
-        ->where('product_id', $product_id);
+            ->where('product_id', $product_id);
         // ->when($no_seri, fn($qq) => $qq->where('no_seri', $no_seri))
         // ->when($tanggal_expired, fn($qq) => $qq->where('tanggal_expired', $tanggal_expired));
 
@@ -463,7 +447,7 @@ class PurchasesReturnController extends Controller
         $runningSisa = 0;
         foreach ($stocks as $stock) {
             if ($stock->type === 'in') $runningSisa += $stock->jumlah;
-            elseif (in_array($stock->type, ['out','destroy'])) $runningSisa -= $stock->jumlah;
+            elseif (in_array($stock->type, ['out', 'destroy'])) $runningSisa -= $stock->jumlah;
 
             $stock->sisa_stok = $runningSisa;
             $stock->subtotal = $stock->jumlah * $stock->harga_net;

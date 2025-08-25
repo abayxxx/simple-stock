@@ -3,12 +3,13 @@
 
 namespace App\Http\Controllers\Finances;
 
-use App\Models\SalesInvoice;
+use App\Exports\DebtExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
 use App\Http\Controllers\Controller;
 use App\Models\PurchasesInvoice;
+use Maatwebsite\Excel\Facades\Excel;
 
 class DebtReportController extends Controller
 {
@@ -18,11 +19,11 @@ class DebtReportController extends Controller
 
         if ($request->ajax()) {
             $supplierSummary = PurchasesInvoice::select([
-                    'company_profile_id',
-                    DB::raw('SUM(grand_total) as total_debet'),
-                    DB::raw('SUM(total_bayar + total_retur) as total_kredit'),
-                    DB::raw('SUM(sisa_tagihan) as total_sisa')
-                ])
+                'company_profile_id',
+                DB::raw('SUM(grand_total) as total_debet'),
+                DB::raw('SUM(total_bayar + total_retur) as total_kredit'),
+                DB::raw('SUM(sisa_tagihan) as total_sisa')
+            ])
                 ->with('supplier')
                 // ->where('sisa_tagihan', '>', 0)
                 ->whereDate('tanggal', '<=', $date)
@@ -34,7 +35,7 @@ class DebtReportController extends Controller
                 return [
                     'kode'         => $row->supplier->code ?? '-',
                     'nama'         => $row->supplier->name ?? '-',
-                    'kategori'     => $row->supplier->kategori ?? '-',
+                    'kategori'     => $row->supplier->relationship ?? '-',
                     'debet'        => number_format($row->total_debet, 2, ',', '.'),
                     'kredit'       => number_format($row->total_kredit, 2, ',', '.'),
                     'sisa'         => number_format($row->total_sisa, 2, ',', '.'),
@@ -48,5 +49,11 @@ class DebtReportController extends Controller
         }
 
         return view('finances.debt.index', compact('date'));
+    }
+
+    public function export(Request $request)
+    {
+        $date = $request->get('tanggal', now()->toDateString());
+        return Excel::download(new DebtExport($date), 'laporan_hutang_' . $date . '.xlsx');
     }
 }

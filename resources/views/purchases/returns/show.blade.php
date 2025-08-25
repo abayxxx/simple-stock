@@ -94,7 +94,7 @@
             <div class="col-md-3"><b>Total Bayar:</b> Rp {{ number_format($return->total_bayar,2,',','.') }}</div>
             <div class="col-md-3"><b>Sisa Tagihan:</b> Rp {{ number_format($return->sisa_tagihan,2,',','.') }}</div>
         </div>
-        <a href="{{ route('returns.index') }}" class="btn btn-secondary mt-4">Kembali</a>
+        <a href="{{ route('purchases.returns.index') }}" class="btn btn-secondary mt-4">Kembali</a>
     </div>
 </div>
 @stop

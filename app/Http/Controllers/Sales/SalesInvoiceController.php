@@ -115,16 +115,16 @@ class SalesInvoiceController extends Controller
     public function create()
     {
         $customers = CompanyProfile::orderBy('name')
-        ->where('relationship', '!=', 'supplier') // Ensure not a supplier
-        ->get();
+            ->where('relationship', '!=', 'supplier') // Ensure not a supplier
+            ->get();
         $salesGroups = SalesGroup::orderBy('nama')->get();
-       
+
         $branches = CompanyBranch::orderBy('name')->get();
 
         return view('sales.invoices.create', compact('customers', 'salesGroups', 'branches'));
     }
 
-   public function store(Request $request)
+    public function store(Request $request)
     {
         $data = $request->validate([
             'kode' => 'nullable|string|max:50|unique:sales_invoices,kode',
@@ -182,12 +182,18 @@ class SalesInvoiceController extends Controller
             $subtotal = 0;
             foreach ($items as $it) {
                 $line = (float)$it['qty'] * (float)$it['harga_satuan'];
-                $p1 = $it['diskon_1_persen'] ?? 0; if ($p1) $line -= $line * ($p1/100);
-                $p2 = $it['diskon_2_persen'] ?? 0; if ($p2) $line -= $line * ($p2/100);
-                $p3 = $it['diskon_3_persen'] ?? 0; if ($p3) $line -= $line * ($p3/100);
-                $r1 = $it['diskon_1_rupiah'] ?? 0; $line -= $r1;
-                $r2 = $it['diskon_2_rupiah'] ?? 0; $line -= $r2;
-                $r3 = $it['diskon_3_rupiah'] ?? 0; $line -= $r3;
+                $p1 = $it['diskon_1_persen'] ?? 0;
+                if ($p1) $line -= $line * ($p1 / 100);
+                $p2 = $it['diskon_2_persen'] ?? 0;
+                if ($p2) $line -= $line * ($p2 / 100);
+                $p3 = $it['diskon_3_persen'] ?? 0;
+                if ($p3) $line -= $line * ($p3 / 100);
+                $r1 = $it['diskon_1_rupiah'] ?? 0;
+                $line -= $r1;
+                $r2 = $it['diskon_2_rupiah'] ?? 0;
+                $line -= $r2;
+                $r3 = $it['diskon_3_rupiah'] ?? 0;
+                $line -= $r3;
                 if ($line < 0) $line = 0;
                 $subtotal += $line;
             }
@@ -209,6 +215,13 @@ class SalesInvoiceController extends Controller
             $invoice = SalesInvoice::create($header);
 
             foreach ($items as $item) {
+
+                // check if tanggal_expired is valid date or "null" convert to null
+                if (!empty($item['tanggal_expired']) && strtolower($item['tanggal_expired']) === 'null') {
+                    $item['tanggal_expired'] = null;
+                }
+
+
                 $batchRows = DB::table('stocks')
                     ->where('product_id', $item['product_id'])
                     // ->when(!empty($item['no_seri']), fn($q) => $q->where('no_seri', $item['no_seri']))
@@ -216,9 +229,9 @@ class SalesInvoiceController extends Controller
                     ->lockForUpdate()
                     ->get();
 
-                $available = ($batchRows->where('type','in')->sum('jumlah'))
-                            - ($batchRows->where('type','out')->sum('jumlah'))
-                            - ($batchRows->where('type','destroy')->sum('jumlah'));
+                $available = ($batchRows->where('type', 'in')->sum('jumlah'))
+                    - ($batchRows->where('type', 'out')->sum('jumlah'))
+                    - ($batchRows->where('type', 'destroy')->sum('jumlah'));
 
                 if ($item['qty'] > $available) {
                     throw \Illuminate\Validation\ValidationException::withMessages([
@@ -237,7 +250,7 @@ class SalesInvoiceController extends Controller
                     'harga_net'        => $item['harga_satuan'],
                     'catatan'          => "Penjualan (Faktur: {$invoice->kode})" . (isset($item['catatan']) ? " - {$item['catatan']}" : ''),
                     'sisa_stok'        => 0,
-                    'created_at'      => $invoice->tanggal, // Align with invoice time
+                    'created_at'      => $invoice->tanggal . ' ' . now()->format('H:i:s'),
                 ])->id;
 
                 self::updateAllSisaStok($item['product_id'], $item['no_seri'] ?? null, $item['tanggal_expired'] ?? null);
@@ -264,7 +277,7 @@ class SalesInvoiceController extends Controller
         }
 
         $customers = CompanyProfile::orderBy('name')
-        ->where('relationship', '!=', 'supplier') // Ensure not a supplier
+            ->where('relationship', '!=', 'supplier') // Ensure not a supplier
             ->get();
         $salesGroups = SalesGroup::orderBy('nama')->get();
         // load only products in purchases invoice
@@ -274,7 +287,7 @@ class SalesInvoiceController extends Controller
         return view('sales.invoices.edit', compact('invoice', 'customers', 'salesGroups', 'products', 'branches'));
     }
 
-   public function update(Request $request, SalesInvoice $invoice)
+    public function update(Request $request, SalesInvoice $invoice)
     {
         // ✅ Block jika locked
         // if ($invoice->is_locked) {
@@ -350,8 +363,8 @@ class SalesInvoiceController extends Controller
             // 1) Hapus stok 'out' lama (pakai kode LAMA & LIKE agar kebal perubahan catatan item)
             $oldItems = $invoice->items()->with(['product'])->get(); // ambil dulu sebelum delete
             foreach ($oldItems as $old) {
-               
-                 $query = Stock::where('product_id', $old->product_id)
+
+                $query = Stock::where('product_id', $old->product_id)
                     ->where('type', 'out')
                     ->where(function ($q) use ($old) {
                         // filter batch bila ada
@@ -393,7 +406,7 @@ class SalesInvoiceController extends Controller
                     'harga_net'        => $item['harga_satuan'],
                     'catatan'          => "Penjualan (Faktur: {$invoice->kode})" . (isset($item['catatan']) ? " - {$item['catatan']}" : ''),
                     'sisa_stok'        => 0,
-                    'created_at'       => $invoice->tanggal, // pakai waktu lama untuk konsistensi
+                    'created_at'       => $invoice->tanggal . ' ' . now()->format('H:i:s'), // pakai waktu lama untuk konsistensi
                 ]);
 
                 self::updateAllSisaStok($item['product_id'], $item['no_seri'] ?? null, $item['tanggal_expired'] ?? null);
@@ -407,18 +420,18 @@ class SalesInvoiceController extends Controller
     public function destroy(SalesInvoice $invoice)
     {
         // Hapus stok 'out' terkait
-       $items = $invoice->items()->with(['product'])->get();
+        $items = $invoice->items()->with(['product'])->get();
         foreach ($items as $item) {
             $stocks = Stock::where('product_id', $item->product_id)
                 ->where('type', 'out')
                 // ->when($item->no_seri, fn($q) => $q->where('no_seri', $item->no_seri))
                 // ->when($item->tanggal_expired, fn($q) => $q->where('tanggal_expired', $item->tanggal_expired))
                 ->where('catatan', 'like', "Penjualan (Faktur: {$invoice->kode})%")
-                ->delete(); 
+                ->delete();
             // recompute sisa stok per-batch
             self::updateAllSisaStok($item->product_id, $item->no_seri, $item->tanggal_expired);
         }
-       
+
         //Hapus semua item terkait
         $invoice->items()->delete();
         //Hapus faktur
@@ -452,9 +465,9 @@ class SalesInvoiceController extends Controller
         if ($lock) $q->lockForUpdate();
 
         $rows = $q->get(); // biar konsisten saat lock
-        $in = $rows->where('type','in')->sum('jumlah');
-        $out = $rows->where('type','out')->sum('jumlah');
-        $destroy = $rows->where('type','destroy')->sum('jumlah');
+        $in = $rows->where('type', 'in')->sum('jumlah');
+        $out = $rows->where('type', 'out')->sum('jumlah');
+        $destroy = $rows->where('type', 'destroy')->sum('jumlah');
         return $in - $out - $destroy;
     }
 
@@ -463,8 +476,8 @@ class SalesInvoiceController extends Controller
      */
     public static function updateAllSisaStok($product_id, $no_seri = null, $tanggal_expired = null)
     {
-       $query = Stock::query()
-        ->where('product_id', $product_id);
+        $query = Stock::query()
+            ->where('product_id', $product_id);
         // ->when($no_seri, fn($qq) => $qq->where('no_seri', $no_seri))
         // ->when($tanggal_expired, fn($qq) => $qq->where('tanggal_expired', $tanggal_expired));
 
@@ -472,7 +485,7 @@ class SalesInvoiceController extends Controller
         $runningSisa = 0;
         foreach ($stocks as $stock) {
             if ($stock->type === 'in') $runningSisa += $stock->jumlah;
-            elseif (in_array($stock->type, ['out','destroy'])) $runningSisa -= $stock->jumlah;
+            elseif (in_array($stock->type, ['out', 'destroy'])) $runningSisa -= $stock->jumlah;
 
             $stock->sisa_stok = $runningSisa;
             $stock->subtotal = $stock->jumlah * $stock->harga_net;
@@ -484,7 +497,7 @@ class SalesInvoiceController extends Controller
     public function print($id)
     {
         $invoice = SalesInvoice::with(['customer', 'items.product', 'salesGroup'])->findOrFail($id);
-        
+
         return view('sales.invoices.print', compact('invoice'));
     }
 
@@ -555,7 +568,7 @@ class SalesInvoiceController extends Controller
                 'si.total_bayar',
                 'si.sisa_tagihan',
             ])
-            ->when($awal && $akhir, fn($qq) => $qq->whereBetween('si.tanggal', [$awal.' 00:00:00', $akhir.' 23:59:59']))
+            ->when($awal && $akhir, fn($qq) => $qq->whereBetween('si.tanggal', [$awal . ' 00:00:00', $akhir . ' 23:59:59']))
             ->when($customerId, fn($qq) => $qq->where('si.company_profile_id', $customerId))
             ->when($lokasiId, fn($qq) => $qq->where('si.lokasi_id', $lokasiId))
             ->when($salesGroupId, fn($qq) => $qq->where('si.sales_group_id', $salesGroupId))
@@ -572,7 +585,7 @@ class SalesInvoiceController extends Controller
 
         $pdf = Pdf::loadView('sales.invoices.export_pdf', [
             'rows'        => $rows,
-            'periodeText' => $periodeText,  
+            'periodeText' => $periodeText,
             'total'       => $total,
         ])->setPaper('a4', 'landscape'); // or 'landscape'
 

@@ -124,12 +124,25 @@ $satuanMassaList = $satuanMassaList ?? ['GRAM', 'KG', 'MG', 'LITER', 'ML', 'OUNC
             <div class="col-md-6">
                 <div class="form-group">
                     <label>HPP Bruto (Kecil)</label>
-                    <input name="hpp_bruto_kecil" value="{{ old('hpp_bruto_kecil', $product->hpp_bruto_kecil ?? '') }}" class="form-control" type="number" step="0.01">
+                    <input
+                    value="{{ old('hpp_bruto_kecil', $product->hpp_bruto_kecil ?? '') }}"
+                    class="form-control format-number"
+                    type="text"
+                    autocomplete="off"
+                    id="hpp_bruto_kecil_display">
+
+                    <input
+                    type="hidden"
+                    name="hpp_bruto_kecil"
+                    id="hpp_bruto_kecil"
+                    value="{{ old('hpp_bruto_kecil', $product->hpp_bruto_kecil ?? '') }}">
                     @error('hpp_bruto_kecil') <div class="invalid-feedback">{{ $message }}</div> @enderror
+
                 </div>
                 <div class="form-group">
                     <label>HPP Bruto (Besar)</label>
-                    <input name="hpp_bruto_besar" value="{{ old('hpp_bruto_besar', $product->hpp_bruto_besar ?? '') }}" class="form-control" type="number" step="0.01">
+                    <input value="{{ old('hpp_bruto_besar', $product->hpp_bruto_besar ?? '') }}" class="form-control format-number" type="text" autocomplete="off" id="hpp_bruto_besar_display">
+                    <input type="hidden" name="hpp_bruto_besar" id="hpp_bruto_besar" value="{{ old('hpp_bruto_besar', $product->hpp_bruto_besar ?? '') }}">
                     @error('hpp_bruto_besar') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
                 @for($i=1;$i<=5;$i++)
@@ -148,7 +161,9 @@ $satuanMassaList = $satuanMassaList ?? ['GRAM', 'KG', 'MG', 'LITER', 'ML', 'OUNC
         <div class="col-md-6">
             <div class="form-group">
                 <label>Harga Jual Umum</label>
-                <input name="harga_umum" value="{{ old('harga_umum', $product->harga_umum ?? '') }}" class="form-control" type="number" step="0.01">
+                <input  value="{{ old('harga_umum', $product->harga_umum ?? '') }}" class="form-control format-number" type="text" autocomplete="off" id="harga_umum_display">
+                <input type="hidden" name="harga_umum" id="harga_umum" value="{{ old('harga_umum', $product->harga_umum ?? '') }}">
+                @error('harga_umum') <div class="invalid-feedback">{{ $message }}</div> @enderror
             </div>
             @for($i=1;$i<=5;$i++)
                 <div class="form-group">
@@ -160,3 +175,7 @@ $satuanMassaList = $satuanMassaList ?? ['GRAM', 'KG', 'MG', 'LITER', 'ML', 'OUNC
 </div>
 </div>
 </div>
+
+@section('js')
+    @vite(['resources/js/numberFormatter.js'])
+@endsection
