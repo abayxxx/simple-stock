@@ -5,8 +5,8 @@
     <title>Cetak Tanda Terima</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            font-size: 12px;
+            font-family: 'monospace';
+            font-size: 15px;
         }
 
         .outer-border {
@@ -19,7 +19,7 @@
         .tt-title {
             text-align: center;
             font-weight: bold;
-            font-size: 19px;
+            font-size: 22px;
             margin-bottom: 5px;
             margin-top: 8px;
             letter-spacing: 1.5px;
@@ -31,12 +31,12 @@
         }
 
         .tt-info td {
-            font-size: 13px;
+            font-size: 15px;
             vertical-align: top;
         }
 
         .tt-faktur {
-            font-size: 13px;
+            font-size: 15px;
             font-weight: bold;
             margin-bottom: 4px;
         }
@@ -78,7 +78,7 @@
             padding: 5px 7px;
             margin-top: 13px;
             margin-bottom: 8px;
-            font-size: 13px;
+            font-size: 15px;
             height: 50px;
         }
 
@@ -98,7 +98,7 @@
         }
 
         .tt-footer-table td {
-            font-size: 13px;
+            font-size: 15px;
             vertical-align: bottom;
         }
 
@@ -161,7 +161,7 @@
                         <th class="text-center" style="width:28px;">No.</th>
                         <th class="text-center" style="width:110px;">No. Faktur</th>
                         <th class="text-center" style="width:80px;">Tanggal</th>
-                        <th class="text-center" style="width:110px;">Total Faktur</th>
+                        <th class="text-center" style="width:150px;">Total Faktur</th>
                         <th class="text-center">Keterangan</th>
                     </tr>
                 </thead>
