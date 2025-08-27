@@ -5,7 +5,7 @@
     <title>Faktur Retur Penjualan - {{ $invoice->kode }}</title>
     <style>
         body {
-            font-family: 'monospace';
+            font-family: Arial, sans-serif;
             font-size: 14px;
         }
 
@@ -80,7 +80,7 @@
             </table>
         </div>
     </div>
-    <table style="margin-top: 3px;" class="noborder">
+    <table style="margin-top: 10px;" class="noborder">
         <thead>
             <tr>
                 <th>No.</th>

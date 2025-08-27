@@ -5,7 +5,7 @@
     <title>Faktur Return Pembelian - {{ $invoice->kode }}</title>
     <style>
         body {
-            font-family: 'monospace';
+            font-family: Arial, sans-serif;
             font-size: 14px;
         }
 
@@ -76,7 +76,7 @@
             </table>
         </div>
     </div>
-    <table class="noborder" style="margin-top: 3px;">
+    <table class="noborder" style="margin-top: 10px;">
         <thead>
             <tr>
                 <th>No.</th>
