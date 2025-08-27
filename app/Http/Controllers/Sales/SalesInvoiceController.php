@@ -140,6 +140,11 @@ class SalesInvoiceController extends Controller
             'diskon_faktur' => 'nullable|numeric',
             'diskon_ppn' => 'nullable|numeric',
             'jatuh_tempo' => 'nullable|date',
+            'subtotal' => 'nullable|numeric',
+            'grand_total' => 'nullable|numeric',
+            'total_retur' => 'nullable|numeric',
+            'total_bayar' => 'nullable|numeric',
+            'sisa_tagihan' => 'nullable|numeric',
 
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|integer|exists:products,id',
@@ -179,36 +184,7 @@ class SalesInvoiceController extends Controller
         unset($data['items']);
 
         DB::transaction(function () use (&$invoice, $data, $items) {
-            $subtotal = 0;
-            foreach ($items as $it) {
-                $line = (float)$it['qty'] * (float)$it['harga_satuan'];
-                $p1 = $it['diskon_1_persen'] ?? 0;
-                if ($p1) $line -= $line * ($p1 / 100);
-                $p2 = $it['diskon_2_persen'] ?? 0;
-                if ($p2) $line -= $line * ($p2 / 100);
-                $p3 = $it['diskon_3_persen'] ?? 0;
-                if ($p3) $line -= $line * ($p3 / 100);
-                $r1 = $it['diskon_1_rupiah'] ?? 0;
-                $line -= $r1;
-                $r2 = $it['diskon_2_rupiah'] ?? 0;
-                $line -= $r2;
-                $r3 = $it['diskon_3_rupiah'] ?? 0;
-                $line -= $r3;
-                if ($line < 0) $line = 0;
-                $subtotal += $line;
-            }
-
-            $grand = max(0, $subtotal - ($data['diskon_faktur'] ?? 0));
-            if (!empty($data['diskon_ppn'])) {
-                $grand += $grand * ($data['diskon_ppn'] / 100);
-            }
-
             $header = $data + [
-                'subtotal'     => $subtotal,
-                'grand_total'  => $grand,
-                'total_retur'  => 0,
-                'total_bayar'  => 0,
-                'sisa_tagihan' => $grand,
                 'user_id'      => auth()->id(),
             ];
 

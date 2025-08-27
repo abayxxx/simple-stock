@@ -43,7 +43,12 @@ $existingItems = old('items', isset($return) ? $return->items->toArray() : []);
         <input id="add-satuan" type="hidden">
         <div class="col-md-2 mb-2">
             <label>Harga</label>
-            <input id="add-harga_satuan" type="number" step="0.01" class="form-control harga-input">
+            <input
+                class="form-control format-number harga-input"
+                type="text"
+                autocomplete="off"
+                id="add-harga_satuan_display">
+            <input id="add-harga_satuan" type="hidden" step="0.01" class="form-control harga-input">
         </div>
         <div class="col-md-2 mb-2">
             <label>Sisa Stok</label>
@@ -51,7 +56,13 @@ $existingItems = old('items', isset($return) ? $return->items->toArray() : []);
         </div>
         <div class="col-md-3 mb-2">
             <label>Subtotal Sebelum Diskon</label>
-            <input id="add-sub_total_sblm_disc" type="number"
+            <input
+                class="form-control format-number bg-success bg-opacity-25"
+                type="text"
+                autocomplete="off"
+                id="add-sub_total_sblm_disc_display"
+                readonly>
+            <input id="add-sub_total_sblm_disc" type="hidden"
                 class="form-control sub-total-sblm-disc bg-success bg-opacity-25" readonly>
         </div>
     </div>
@@ -69,19 +80,35 @@ $existingItems = old('items', isset($return) ? $return->items->toArray() : []);
             <label>Diskon Harga Satuan</label>
             <div class="d-flex gap-1">
                 @for($i=1;$i<=3;$i++)
-                    <input id="add-diskon_{{$i}}_rupiah" type="number" step="0.01"
-                    class="form-control diskon-rupiah-input" placeholder="Rp D{{ $i }}">
+                    <input
+                    class="form-control format-number"
+                    type="text"
+                    autocomplete="off"
+                    id="add-diskon_{{$i}}_rupiah_display"
+                    placeholder="Rp D{{ $i }}">
+                    <input id="add-diskon_{{$i}}_rupiah" type="hidden" step="0.01"
+                        class="form-control diskon-rupiah-input" placeholder="Rp D{{ $i }}">
                     @endfor
             </div>
         </div>
         <div class="col-md-2 mb-2">
             <label>Total Diskon Item</label>
-            <input id="add-total_diskon_item" type="number"
+            <input
+                class="form-control format-number bg-success bg-opacity-25"
+                type="text"
+                autocomplete="off"
+                id="add-total_diskon_item_display" readonly>
+            <input id="add-total_diskon_item" type="hidden"
                 class="form-control total-diskon-item-input bg-success bg-opacity-25" readonly>
         </div>
         <div class="col-md-2 mb-2">
             <label>Subtotal Sebelum PPN</label>
-            <input id="add-sub_total_sebelum_ppn" type="number"
+            <input
+                class="form-control format-number bg-success bg-opacity-25"
+                type="text"
+                autocomplete="off"
+                id="add-sub_total_sebelum_ppn_display" readonly>
+            <input id="add-sub_total_sebelum_ppn" type="hidden"
                 class="form-control sub-total-sebelum-ppn-input bg-success bg-opacity-25" readonly>
         </div>
     </div>
@@ -92,7 +119,12 @@ $existingItems = old('items', isset($return) ? $return->items->toArray() : []);
         </div>
         <div class="col-md-3 mb-2">
             <label>Subtotal Setelah PPN</label>
-            <input id="add-sub_total_setelah_disc" type="number"
+            <input
+                class="form-control format-number bg-success bg-opacity-25"
+                type="text"
+                autocomplete="off"
+                id="add-sub_total_setelah_disc_display" readonly>
+            <input id="add-sub_total_setelah_disc" type="hidden"
                 class="form-control sub-total-setelah-disc-input bg-success bg-opacity-25" readonly>
         </div>
     </div>
@@ -169,18 +201,18 @@ $existingItems = old('items', isset($return) ? $return->items->toArray() : []);
         <td>${item.tanggal_expired||''}</td>
         <td>${item.qty||''}</td>
         <td>${(item.satuan||'').toUpperCase()}</td>
-        <td>${Number(item.harga_satuan).toLocaleString()||''}</td>
-        <td>${Number(item.sub_total_sblm_disc).toLocaleString()||''}</td>
+        <td>${Number(item.harga_satuan).toLocaleString("id-ID")||''}</td>
+        <td>${isNaN(Number(item.sub_total_sblm_disc)) ? item.sub_total_sblm_disc : Number(item.sub_total_sblm_disc).toLocaleString("id-ID")}</td>
         <td>${item.diskon_1_persen||''}</td>
-        <td>${Number(item.diskon_1_rupiah).toLocaleString()||''}</td>
+        <td>${isNaN(Number(item.diskon_1_rupiah)) ? item.diskon_1_rupiah : Number(item.diskon_1_rupiah).toLocaleString("id-ID")}</td>
         <td>${item.diskon_2_persen||''}</td>
-        <td>${Number(item.diskon_2_rupiah).toLocaleString()||''}</td>
+        <td>${isNaN(Number(item.diskon_2_rupiah)) ? item.diskon_2_rupiah : Number(item.diskon_2_rupiah).toLocaleString("id-ID")}</td>
         <td>${item.diskon_3_persen||''}</td>
-        <td>${Number(item.diskon_3_rupiah).toLocaleString()||''}</td>
-        <td>${Number(item.total_diskon_item).toLocaleString()||''}</td>
-        <td>${Number(item.sub_total_sebelum_ppn).toLocaleString()||''}</td>
+        <td>${isNaN(Number(item.diskon_3_rupiah)) ? item.diskon_3_rupiah : Number(item.diskon_3_rupiah).toLocaleString("id-ID")}</td>
+        <td>${isNaN(Number(item.total_diskon_item)) ? item.total_diskon_item : Number(item.total_diskon_item).toLocaleString("id-ID")}</td>
+        <td>${isNaN(Number(item.sub_total_sebelum_ppn)) ? item.sub_total_sebelum_ppn : Number(item.sub_total_sebelum_ppn).toLocaleString("id-ID")}</td>
         <td>${item.ppn_persen||''}</td>
-        <td>${Number(item.sub_total_setelah_disc).toLocaleString()||''}</td>
+        <td>${isNaN(Number(item.sub_total_setelah_disc)) ? item.sub_total_setelah_disc : Number(item.sub_total_setelah_disc).toLocaleString("id-ID")}</td>
         <td>${item.catatan||''}</td>
         <td >
          <button type="button" class="btn btn-danger btn-sm btn-remove-item"><i class="fa fa-trash"></i></button>
@@ -316,6 +348,7 @@ $existingItems = old('items', isset($return) ? $return->items->toArray() : []);
                 );
                 if (batch) {
                     $('#add-harga_satuan').val(batch.harga_satuan).trigger('input');
+                    $('#add-harga_satuan_display').val(isString(batch.harga_satuan) ? parseStringToFloat(batch.harga_satuan).toLocaleString("id-ID") : (batch.harga_satuan || 0));
                     $('.satuan-box').text(batch.satuan ? batch.satuan.toUpperCase() : 'Satuan');
                     $('#add-qty').val(batch.qty || 1).trigger('input');
                     $('#add-sisa_stok').val(batch.sisa_stok || 0).trigger('input');
@@ -327,13 +360,14 @@ $existingItems = old('items', isset($return) ? $return->items->toArray() : []);
                     for (let i = 1; i <= 3; i++) {
                         $('#add-diskon_' + i + '_persen').val(batch[`diskon_${i}_persen`] || 0).trigger('input');
                         $('#add-diskon_' + i + '_rupiah').val(batch[`diskon_${i}_rupiah`] || 0).trigger('input');
+                        $('#add-diskon_' + i + '_rupiah_display').val(isString(batch[`diskon_${i}_rupiah`]) ? parseStringToFloat(batch[`diskon_${i}_rupiah`]).toLocaleString("id-ID") : (batch[`diskon_${i}_rupiah`] || 0)).trigger('input');
                     }
                 }
             });
         });
 
         // Kalkulasi diskon/subtotal/PPN (add-item-form only)
-        $('#add-item-form').on('input', '.qty-input, .harga-input, .ppn-persen-input, .diskon-persentase-input, .diskon-rupiah-input', function(e) {
+        $('#add-item-form').on('input change keyup', '.qty-input, .harga-input, .ppn-persen-input, .diskon-persentase-input, .diskon-rupiah-input', function(e) {
             let qty = parseFloat($('#add-qty').val()) || 0;
             let harga = parseFloat($('#add-harga_satuan').val()) || 0;
             let diskonTotalPerQty = 0;
@@ -341,6 +375,7 @@ $existingItems = old('items', isset($return) ? $return->items->toArray() : []);
             for (let i = 1; i <= 3; i++) {
                 let persenInput = $('#add-diskon_' + i + '_persen');
                 let rupiahInput = $('#add-diskon_' + i + '_rupiah');
+                let rupiahInputDisplay = $('#add-diskon_' + i + '_display');
                 let hargaDasar = hargaSetelahDiskon;
                 let changed = null;
                 if (e.target === persenInput[0]) changed = 'persen';
@@ -348,12 +383,13 @@ $existingItems = old('items', isset($return) ? $return->items->toArray() : []);
                 if (changed === 'persen' && hargaDasar > 0) {
                     let vPersen = parseFloat(persenInput.val()) || 0;
                     let hasilRp = hargaDasar * vPersen / 100;
-                    rupiahInput.val(hasilRp.toFixed(2));
+                    rupiahInput.val(hasilRp);
+                    rupiahInputDisplay.val(hasilRp.toLocaleString("id-ID"));
                 }
                 if (changed === 'rupiah' && hargaDasar > 0) {
                     let vRupiah = parseFloat(rupiahInput.val()) || 0;
                     let hasilPersen = (vRupiah / hargaDasar) * 100;
-                    persenInput.val(hasilPersen.toFixed(2));
+                    persenInput.val(hasilPersen);
                 }
                 let diskonP = parseFloat(persenInput.val()) || 0;
                 let nominal = hargaDasar * diskonP / 100;
@@ -361,15 +397,19 @@ $existingItems = old('items', isset($return) ? $return->items->toArray() : []);
                 hargaSetelahDiskon = hargaDasar - nominal;
             }
             let subtotal = qty * harga;
-            $('#add-sub_total_sblm_disc').val(subtotal.toFixed(2));
+            $('#add-sub_total_sblm_disc').val(subtotal);
+            $('#add-sub_total_sblm_disc_display').val(subtotal.toLocaleString("id-ID"));
             let totalDiskonSemuaQty = diskonTotalPerQty * qty;
-            $('#add-total_diskon_item').val(totalDiskonSemuaQty.toFixed(2));
+            $('#add-total_diskon_item').val(totalDiskonSemuaQty);
+            $('#add-total_diskon_item_display').val(totalDiskonSemuaQty.toLocaleString("id-ID"));
             let subtotalSebelumPPN = (harga - diskonTotalPerQty) * qty;
-            $('#add-sub_total_sebelum_ppn').val(subtotalSebelumPPN.toFixed(2));
+            $('#add-sub_total_sebelum_ppn').val(subtotalSebelumPPN);
+            $('#add-sub_total_sebelum_ppn_display').val(subtotalSebelumPPN.toLocaleString("id-ID"));
             let ppnPersen = parseFloat($('#add-ppn_persen').val()) || 0;
             let ppnNominal = subtotalSebelumPPN * ppnPersen / 100;
             let subtotalSetelahPPN = subtotalSebelumPPN + ppnNominal;
-            $('#add-sub_total_setelah_disc').val(subtotalSetelahPPN.toFixed(2));
+            $('#add-sub_total_setelah_disc').val(subtotalSetelahPPN);
+            $('#add-sub_total_setelah_disc_display').val(subtotalSetelahPPN.toLocaleString("id-ID"));
         });
 
 
@@ -473,23 +513,32 @@ $existingItems = old('items', isset($return) ? $return->items->toArray() : []);
             if ($("#add-tanggal_expired option[value='" + item.tanggal_expired + "']").length === 0) {
             $("#add-tanggal_expired").append(new Option(item.tanggal_expired, item.tanggal_expired, true, true));
             }
+            $('#add-no_seri').val(item.no_seri).trigger('change');
             $('#add-tanggal_expired').val(item.tanggal_expired).trigger('change');
             $('#add-qty').val(item.qty).trigger('input');
             $('#add-satuan').val(item.satuan);
             $('.satuan-box').text(item.satuan ? item.satuan.toUpperCase() : 'Satuan');
-            $('#add-harga_satuan').val(item.harga_satuan).trigger('input');
-            $('#add-sisa_stok').val(item.sisa_stok).trigger('input');
-            $('#add-sub_total_sblm_disc').val(item.sub_total_sblm_disc).trigger('input');
-            $('#add-diskon_1_persen').val(item.diskon_1_persen).trigger('input');
-            $('#add-diskon_1_rupiah').val(item.diskon_1_rupiah).trigger('input');
-            $('#add-diskon_2_persen').val(item.diskon_2_persen).trigger('input');
-            $('#add-diskon_2_rupiah').val(item.diskon_2_rupiah).trigger('input');
-            $('#add-diskon_3_persen').val(item.diskon_3_persen).trigger('input');
-            $('#add-diskon_3_rupiah').val(item.diskon_3_rupiah).trigger('input');
-            $('#add-total_diskon_item').val(item.total_diskon_item).trigger('input');
-            $('#add-sub_total_sebelum_ppn').val(item.sub_total_sebelum_ppn).trigger('input');
-            $('#add-ppn_persen').val(item.ppn_persen).trigger('input');
-            $('#add-sub_total_setelah_disc').val(item.sub_total_setelah_disc).trigger('input');
+            $('#add-harga_satuan_display').val(item.harga_satuan);
+            $('#add-harga_satuan').val(isString(item.harga_satuan) ? parseStringToFloat(item.harga_satuan) : item.harga_satuan);
+            $('#add-sisa_stok').val(item.sisa_stok);
+            $('#add-sub_total_sblm_disc').val(isString(item.sub_total_sblm_disc) ? parseStringToFloat(item.sub_total_sblm_disc) : item.sub_total_sblm_disc);
+            $('#add-sub_total_sblm_disc_display').val(item.sub_total_sblm_disc);
+            $('#add-diskon_1_persen').val(item.diskon_1_persen);
+            $('#add-diskon_1_rupiah').val(isString(item.diskon_1_rupiah) ? parseStringToFloat(item.diskon_1_rupiah) : item.diskon_1_rupiah);
+            $('#add-diskon_1_rupiah_display').val(item.diskon_1_rupiah);
+            $('#add-diskon_2_persen').val(item.diskon_2_persen);
+            $('#add-diskon_2_rupiah').val(isString(item.diskon_2_rupiah) ? parseStringToFloat(item.diskon_2_rupiah) : item.diskon_2_rupiah);
+            $('#add-diskon_2_rupiah_display').val(item.diskon_2_rupiah);
+            $('#add-diskon_3_persen').val(item.diskon_3_persen);
+            $('#add-diskon_3_rupiah').val(isString(item.diskon_3_rupiah) ? parseStringToFloat(item.diskon_3_rupiah) : item.diskon_3_rupiah);
+            $('#add-diskon_3_rupiah_display').val(item.diskon_3_rupiah);
+            $('#add-total_diskon_item').val(isString(item.total_diskon_item) ? parseStringToFloat(item.total_diskon_item) : item.total_diskon_item);
+            $('#add-total_diskon_item_display').val(item.total_diskon_item);
+            $('#add-sub_total_sebelum_ppn').val(isString(item.sub_total_sebelum_ppn) ? parseStringToFloat(item.sub_total_sebelum_ppn) : item.sub_total_sebelum_ppn);
+            $('#add-sub_total_sebelum_ppn_display').val(item.sub_total_sebelum_ppn);
+            $('#add-ppn_persen').val(item.ppn_persen);
+            $('#add-sub_total_setelah_disc').val(isString(item.sub_total_setelah_disc) ? parseStringToFloat(item.sub_total_setelah_disc) : item.sub_total_setelah_disc);
+            $('#add-sub_total_setelah_disc_display').val(item.sub_total_setelah_disc);
             $('#add-catatan').val(item.catatan);
             // Remove the row from table
             $tr.remove();
@@ -550,18 +599,18 @@ $existingItems = old('items', isset($return) ? $return->items->toArray() : []);
                   <td>${row.customer_nama}</td>
                   <td>${row.produk_nama}</td>
                   <td>${row.qty} ${row.satuan}</td>
-                  <td>${Number(row.harga_satuan).toLocaleString()}</td>
+                  <td>${Number(row.harga_satuan).toLocaleString("id-ID")}</td>
                   <td>${row.diskon_1_persen||0}</td>
                   <td>${row.diskon_1_rupiah||0}</td>
                   <td>${row.diskon_2_persen||0}</td>
                   <td>${row.diskon_2_rupiah||0}</td>
                   <td>${row.diskon_3_persen||0}</td>
                   <td>${row.diskon_3_rupiah||0}</td>
-                    <td>${Number(row.sub_total_sblm_disc).toLocaleString()}</td>
-                    <td>${Number(row.total_diskon_item).toLocaleString()}</td>
-                    <td>${Number(row.sub_total_sebelum_ppn).toLocaleString()}</td>
+                    <td>${Number(row.sub_total_sblm_disc).toLocaleString("id-ID")}</td>
+                    <td>${Number(row.total_diskon_item).toLocaleString("id-ID")}</td>
+                    <td>${Number(row.sub_total_sebelum_ppn).toLocaleString("id-ID")}</td>
                     <td>${row.ppn_persen||0}</td>
-                    <td>${Number(row.sub_total_setelah_disc).toLocaleString()}</td>
+                    <td>${Number(row.sub_total_setelah_disc).toLocaleString("id-ID")}</td>
                     <td>${row.catatan||''}</td>
                 </tr>`;
                     });

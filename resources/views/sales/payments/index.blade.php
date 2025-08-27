@@ -128,9 +128,6 @@
                 const $sup = $('#filter_customer').empty().append('<option value="">Semua Supplier</option>');
                 res.customers.forEach(o => $sup.append(`<option value="${o.id}">${o.name}</option>`));
 
-                const $sg = $('#filter_sg').empty().append('<option value="">Semua Sales Group</option>');
-                res.sales_groups.forEach(o => $sg.append(`<option value="${o.id}">${o.nama}</option>`));
-
                 // after refresh options, reload table with new filters
                 $('#datatable').DataTable().ajax.reload();
             });

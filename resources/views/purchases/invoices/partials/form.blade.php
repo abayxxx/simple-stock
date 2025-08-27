@@ -119,6 +119,10 @@
 
 @include('purchases.invoices.partials.summary', ['invoice' => $invoice])
 
+@section('js')
+@vite(['resources/js/numberFormatter.js'])
+@vite(['resources/js/filledOption.js'])
+@endsection
 @push('js')
 <script>
     function toggleKodeFaktur() {
@@ -176,14 +180,31 @@
 
         // Hitung total bayar (default = grandTotalWithDiskon)
         let sisaTagihan = grandTotalWithDiskon;
+         
 
         // Set value ke summary
-        $('[name="subtotal"]').val(subtotal.toFixed(2));
-        $('[name="diskon_item"]').val(totalDiskonItem.toFixed(2));
-        $('[name="subtotal_sebelum_ppn"]').val(subtotalSebelumPPN.toFixed(2));
-        $('[name="grand_total"]').val(grandTotalWithDiskon.toFixed(2));
-        $('[name="total_bayar"]').val(0);
-        $('[name="sisa_tagihan"]').val(sisaTagihan.toFixed(2));
+        $('[name="subtotal"]').val(subtotal);
+        $('#subtotal_display').val(subtotal.toLocaleString('id-ID'));
+        $('[name="diskon_item"]').val(totalDiskonItem);
+        $('#diskon_item_display').val(totalDiskonItem.toLocaleString('id-ID'));
+        $('[name="subtotal_sebelum_ppn"]').val(subtotalSebelumPPN);
+        $('#subtotal_sebelum_ppn_display').val(subtotalSebelumPPN.toLocaleString('id-ID'));
+        $('[name="grand_total"]').val(grandTotalWithDiskon);
+        $('#grand_total_display').val(grandTotalWithDiskon.toLocaleString('id-ID'));
+        // $('[name="total_bayar"]').val(0);
+        // $('#total_bayar_display').val(0);
+        $('[name="sisa_tagihan"]').val(sisaTagihan);
+        $('#sisa_tagihan_display').val(sisaTagihan.toLocaleString('id-ID'));
+
+        // jika invoice ada, ubah total bayar dan sisa tagihan sesuai nilai di db
+        @if($invoice)
+        let totalBayarDb = parseFloat({{ $invoice->total_bayar }}) || 0;
+        let sisaTagihanDb = parseFloat({{ $invoice->sisa_tagihan }}) || 0;
+        $('[name="total_bayar"]').val(totalBayarDb);
+        $('#total_bayar_display').val(totalBayarDb.toLocaleString('id-ID'));
+        $('[name="sisa_tagihan"]').val(sisaTagihanDb);
+        $('#sisa_tagihan_display').val(sisaTagihanDb.toLocaleString('id-ID'));
+        @endif
     }
 
 

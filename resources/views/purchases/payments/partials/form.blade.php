@@ -65,7 +65,10 @@ $items = old('items', isset($payment) ? $payment->items->toArray() : []);
 
 @include('purchases.payments.partials.items', ['items' => $items])
 
-
+@section('js')
+@vite(['resources/js/numberFormatter.js'])
+@vite(['resources/js/filledOption.js'])
+@endsection
 @push('js')
 <script src="{{ asset('vendor/adminlte/plugins/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -122,8 +125,8 @@ $items = old('items', isset($payment) ? $payment->items->toArray() : []);
                     <td>FAKTUR</td>
                     <td>${inv.kode}</td>
                     <td>${inv.tanggal}</td>
-                    <td>${inv.grand_total}</td>
-                    <td>${inv.sisa_tagihan}</td>
+                    <td>${Number(inv.grand_total || 0).toLocaleString("id-ID")}</td>
+                    <td>${Number(inv.sisa_tagihan || 0).toLocaleString("id-ID")}</td>
                 </tr>`;
                 });
                 // res.returns.forEach(ret => {

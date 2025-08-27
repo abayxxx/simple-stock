@@ -73,14 +73,13 @@
                         </div>
                         <div class="col-md-2">
                             <label class="fw-bold">Nilai Nota</label>
-                            <input type="text" class="form-control-plaintext nilai-nota" readonly value="${item.nilai_nota}">
-                            <input type="hidden" name="items[${idx}][nilai_nota]" class="nilai-nota" value="${item.nilai_nota}">
+                            <input type="text" class="form-control-plaintext nilai-nota" readonly value="${Number(item.nilai_nota).toLocaleString("id-ID")}">
+                            <input type="hidden" name="items[${idx}][nilai_nota]" class="nilai-nota" value="${Number(item.nilai_nota) || 0}">
                         </div>
                         <div class="col-md-2">
                             <label class="fw-bold">Sisa</label>
-                            <input type="hidden" name="items[${idx}][sisa_db]" class="sisa-db" value="${item.sisa ?? 0}">
-
-                            <input name="items[${idx}][sisa]" type="number" class="form-control sisa-input" readonly value="${ item.sisa ?? 0}">
+                            <input id="items[${idx}]_sisa_display" type="text" class="form-control sisa-input-display format-number" readonly value="${ Number(item.sisa || 0).toLocaleString("id-ID")}" autocomplete="off">
+                            <input class="sisa-input" type="hidden" id="items[${idx}]_sisa" name="items[${idx}][sisa]" data-sisa-db="${item.sisa ?? 0}"  value="${Number(item.sisa) || 0}" >
                         </div>
                         <div class="col-md-2 text-end">
                             <button type="button" class="btn btn-danger btn-remove-nota mt-3">
@@ -91,41 +90,49 @@
                     <div class="row gy-2 gx-3 mt-2">
                         <div class="col-md-2">
                             <label>Tunai</label>
-                            <input name="items[${idx}][tunai]" type="number" class="form-control bayar-input tunai-input" min="0" data-tunai-db="${item.tunai ?? 0}" value="${item.tunai ?? 0}">
+                            <input type="text" class="form-control bayar-input format-number" min="0" value="${item.tunai ?? 0}" autocomplete="off" id="items[${idx}]_tunai_display">
+                            <input type="hidden" class="tunai-input" data-tunai-db="${item.tunai ?? 0}" name="items[${idx}][tunai]" id="items[${idx}]_tunai" value="${Number(item.tunai) || 0}">
                         </div>
                         <div class="col-md-2">
                             <label>BANK</label>
-                            <input name="items[${idx}][bank]" type="number" class="form-control bayar-input bank-input" min="0" data-bank-db="${item.bank ?? 0}" value="${item.bank ?? 0}">
+                            <input type="text" class="form-control bayar-input format-number" min="0" data-bank-db="${item.bank ?? 0}" value="${item.bank ?? 0}" autocomplete="off" id="items[${idx}]_bank_display">
+                            <input class="bank-input" type="hidden" id="items[${idx}]_bank" value="${Number(item.bank) || 0}" data-bank-db="${item.bank ?? 0}" name="items[${idx}][bank]">
                         </div>
                         <div class="col-md-2">
                             <label>GIRO</label>
-                            <input name="items[${idx}][giro]" type="number" class="form-control bayar-input giro-input" min="0" data-giro-db="${item.giro ?? 0}" value="${item.giro ?? 0}">
+                            <input type="text" class="form-control bayar-input format-number" min="0" data-giro-db="${item.giro ?? 0}" value="${item.giro ?? 0}" autocomplete="off" id="items[${idx}]_giro_display">
+                            <input class="giro-input" type="hidden" id="items[${idx}]_giro" value="${Number(item.giro) || 0}" data-giro-db="${item.giro ?? 0}" name="items[${idx}][giro]">
                         </div>
                         <div class="col-md-2">
                             <label>CNDN</label>
-                            <input name="items[${idx}][cndn]" type="number" class="form-control bayar-input cndn-input" min="0" data-cndn-db="${item.cndn ?? 0}" value="${item.cndn ?? 0}">
+                            <input type="text" class="form-control bayar-input format-number" min="0" data-cndn-db="${item.cndn ?? 0}" value="${item.cndn ?? 0}" autocomplete="off" id="items[${idx}]_cndn_display">
+                            <input class="cndn-input" type="hidden" id="items[${idx}]_cndn" value="${Number(item.cndn) || 0}" data-cndn-db="${item.cndn ?? 0}" name="items[${idx}][cndn]">
                         </div>
                         <div class="col-md-2">
                             <label>RETUR</label>
-                            <input name="items[${idx}][retur]" type="number" class="form-control retur-input" data-retur-db="${item.retur || 0}" value="${item.retur || 0}">
+                            <input type="text" class="form-control retur-input-change format-number" data-retur-db="${item.retur || 0}"  value="${item.retur || 0}" autocomplete="off" id="items[${idx}]_retur_display">
+                            <input class="retur-input" type="hidden" id="items[${idx}]_retur" value="${Number(item.retur) || 0}" data-retur-db="${item.retur || 0}" name="items[${idx}][retur]">
                         </div>
                         <div class="col-md-2">
                             <label>PANJAR</label>
-                            <input name="items[${idx}][panjar]" type="number" class="form-control bayar-input panjar-input" min="0" data-panjar-db="${item.panjar ?? 0}" value="${item.panjar ?? 0}">
+                            <input type="text" class="form-control bayar-input format-number" min="0" data-panjar-db="${item.panjar ?? 0}" value="${item.panjar ?? 0}" autocomplete="off" id="items[${idx}]_panjar_display">
+                            <input class="panjar-input" type="hidden" id="items[${idx}]_panjar" value="${Number(item.panjar) || 0}" data-panjar-db="${item.panjar ?? 0}" name="items[${idx}][panjar]">
                         </div>
                     </div>
                     <div class="row gy-2 gx-3 mt-2">
                         <div class="col-md-2">
                             <label>LAINNYA</label>
-                            <input name="items[${idx}][lainnya]" type="number" class="form-control bayar-input lainnya-input" min="0" data-lainnya-db="${item.lainnya ?? 0}" value="${item.lainnya ?? 0}">
+                            <input  type="text" class="form-control bayar-input format-number" min="0" data-lainnya-db="${item.lainnya ?? 0}" value="${item.lainnya ?? 0}" autocomplete="off" id="items[${idx}]_lainnya_display">
+                            <input class="lainnya-input" type="hidden" id="items[${idx}]_lainnya" value="${Number(item.lainnya) || 0}" data-lainnya-db="${item.lainnya ?? 0}" name="items[${idx}][lainnya]">
                         </div>
                         <div class="col-md-2">
                             <label>SUBTOTAL</label>
-                            <input name="items[${idx}][sub_total]" type="number" class="form-control subtotal-input" data-subtotal-db="${item.sub_total ?? 0}" readonly value="${item.sub_total ?? 0}">
+                             <input type="text" class="form-control format-number subtotal-input-display" data-subtotal-db="${item.sub_total ?? 0}" readonly value="${item.sub_total ?? 0}" autocomplete="off" id="items[${idx}]_subtotal_display">
+                            <input class="subtotal-input" type="hidden" id="items[${idx}]_subtotal" value="${Number(item.sub_total) ?? 0}" data-subtotal-db="${item.sub_total ?? 0}" name="items[${idx}][sub_total]">
                         </div>
                           <div class="col-md-2">
                             <label>RETUR di Faktur</label>
-                            <input type="number" class="form-control" data-retur="${item.total_retur || item.invoice.total_retur}" value="${item.total_retur || item.invoice.total_retur}" readonly>
+                           <input type="text" " class="retur-faktur-input form-control" value="${Number(item.retur) !== 0 ? Number(item.retur || 0).toLocaleString("id-ID") : Number(item.invoice.total_retur || 0).toLocaleString("id-ID")}" readonly autocomplete="off">
                         </div>
                         <div class="col-md-5">
                             <label>Catatan</label>
@@ -163,7 +170,7 @@
         let returDb = parseFloat($card.find('.retur-input').data('retur-db')) || 0;
         let nilaiNota = parseFloat($card.find('.nilai-nota').val()) || 0;
 
-        let sisaOld = parseFloat($card.find('.sisa-db').val()) || 0;
+        let sisaOld = parseFloat($card.find('.sisa-input').data('sisa-db')) || 0;
 
         // Get sisa from the card
 
@@ -172,21 +179,23 @@
         let subtotalDb = tunaiDb + bankDb + giroDb + cndnDb + panjarDb + lainnyaDb + returDb;
         let sisa = sisaOld - (subtotal - subtotalDb);
 
-        $card.find('.subtotal-input').val(subtotal.toFixed(2));
-        $card.find('.sisa-input').val(sisa.toFixed(2));
+        $card.find('.subtotal-input').val(subtotal);
+        $card.find('.subtotal-input-display').val(Number(subtotal).toLocaleString("id-ID"));
+        $card.find('.sisa-input').val(sisa);
+        $card.find('.sisa-input-display').val(Number(sisa).toLocaleString("id-ID"));
     }
 
     $(function() {
         // (modal fetch, add, and remove logic same as previous version...)
         // Replace all '#selected-nota-table' code with #selected-nota-list and use renderSelectedNota() above.
 
-        $('#selected-nota-list').on('input', '.bayar-input', function() {
+        $('#selected-nota-list').on('input keyup', '.bayar-input', function() {
             let $card = $(this).closest('.card');
             let idx = $card.index();
             calcSubtotalAndSisa(idx);
         });
 
-        $('#selected-nota-list').on('input', '.retur-input', function() {
+        $('#selected-nota-list').on('input keyup', '.retur-input-change', function() {
             let $card = $(this).closest('.card');
             let idx = $card.index();
             calcSubtotalAndSisa(idx);

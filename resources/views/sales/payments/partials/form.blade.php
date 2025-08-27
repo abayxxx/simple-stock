@@ -65,7 +65,10 @@ $items = old('items', isset($payment) ? $payment->items->toArray() : []);
 
 @include('sales.payments.partials.items', ['items' => $items])
 
-
+@section('js')
+@vite(['resources/js/numberFormatter.js'])
+@vite(['resources/js/filledOption.js'])
+@endsection
 @push('js')
 <script src="{{ asset('vendor/adminlte/plugins/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -81,13 +84,14 @@ $items = old('items', isset($payment) ? $payment->items->toArray() : []);
             $.get("{{ url('admin/sales/payments/tarik-nota-options') }}?company_profile_id=" + customerId, function(res) {
                 let rows = '';
                 res.invoices.forEach(inv => {
+                    console.log(inv);
                     rows += `<tr>
                     <td><input type="checkbox" class="nota-checkbox" value="${inv.id}" data-tipe-nota="FAKTUR" data-kode="${inv.kode}" data-tanggal="${inv.tanggal}" data-nilai="${inv.grand_total}" data-sisa="${inv.sisa_tagihan}" data-total-retur="${inv.total_retur}"></td>
                     <td>FAKTUR</td>
                     <td>${inv.kode}</td>
                     <td>${inv.tanggal}</td>
-                    <td>${inv.grand_total}</td>
-                    <td>${inv.sisa_tagihan}</td>
+                    <td>${Number(inv.grand_total || 0).toLocaleString("id-ID")}</td>
+                    <td>${Number(inv.sisa_tagihan || 0).toLocaleString("id-ID")}</td>
                 </tr>`;
                 });
                 // res.returns.forEach(ret => {

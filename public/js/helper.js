@@ -22,6 +22,19 @@ function numberFormat(number, decimals = 0, decPoint = '.', thousandsSep = ',') 
   return parts.join(decPoint);
 }
 
+function isString(val) {
+  return typeof val === 'string' || val instanceof String;
+}
+
+function parseStringToFloat(text) {
+  if (!text) return NaN;
+  return parseFloat(
+    text.replace(/,/g, '')  // remove thousands
+  );
+}
+
 // make sure it's global
 window.select2SetProduct = select2SetProduct;
 window.numberFormat = numberFormat;
+window.isString = isString;
+window.parseStringToFloat = parseStringToFloat; 

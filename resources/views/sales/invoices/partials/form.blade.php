@@ -49,15 +49,15 @@
         </select>
         @error('company_profile_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
     </div>
-     <div class="col-md-2">
-            <label>Lokasi</label>
-            <select id="add-lokasi_id" class="form-control select-lokasi" name="lokasi_id">
-                <option value="">-- Pilih Lokasi --</option>
-                @foreach($branches as $b)
-                <option value="{{ $b->id }}" {{ old('lokasi_id', $invoice->lokasi_id ?? '') == $b->id ? 'selected' : '' }}>{{ $b->name }}</option>
-                @endforeach
-            </select>
-        </div>
+    <div class="col-md-2">
+        <label>Lokasi</label>
+        <select id="add-lokasi_id" class="form-control select-lokasi" name="lokasi_id">
+            <option value="">-- Pilih Lokasi --</option>
+            @foreach($branches as $b)
+            <option value="{{ $b->id }}" {{ old('lokasi_id', $invoice->lokasi_id ?? '') == $b->id ? 'selected' : '' }}>{{ $b->name }}</option>
+            @endforeach
+        </select>
+    </div>
     <div class="col-md-2">
         <label>Sales Group</label>
         <select name="sales_group_id" class="form-control">
@@ -101,7 +101,10 @@
 @include('sales.invoices.partials.items', ['products' => $products, 'branches' => $branches, 'invoice' => $invoice])
 
 @include('sales.invoices.partials.summary', ['invoice' => $invoice])
-
+@section('js')
+@vite(['resources/js/numberFormatter.js'])
+@vite(['resources/js/filledOption.js'])
+@endsection
 @push('js')
 <script>
     function toggleKodeFaktur() {
@@ -123,56 +126,76 @@
     });
 
     function updateSummary() {
-    let subtotal = 0;
-    let totalDiskonItem = 0;
-    let subtotalSebelumPPN = 0;
-    let totalPPN = 0;
-    let grandTotal = 0;
+        let subtotal = 0;
+        let totalDiskonItem = 0;
+        let subtotalSebelumPPN = 0;
+        let totalPPN = 0;
+        let grandTotal = 0;
 
-    // Loop semua baris di tabel (setiap item yang akan disubmit)
-    $('#review-items-table tbody tr').each(function() {
-        let idx = $(this).data('index');
-        // Cari input hidden sesuai index
-        // (field names: sub_total_sblm_disc, total_diskon_item, sub_total_sebelum_ppn, sub_total_setelah_disc)
-        let prefix = `items[${idx}]`;
+        // Loop semua baris di tabel (setiap item yang akan disubmit)
+        $('#review-items-table tbody tr').each(function() {
+            let idx = $(this).data('index');
+            // Cari input hidden sesuai index
+            // (field names: sub_total_sblm_disc, total_diskon_item, sub_total_sebelum_ppn, sub_total_setelah_disc)
+            let prefix = `items[${idx}]`;
 
-        subtotal += parseFloat($(`[name="${prefix}[sub_total_sblm_disc]"]`).val()) || 0;
-        totalDiskonItem += parseFloat($(`[name="${prefix}[total_diskon_item]"]`).val()) || 0;
-        subtotalSebelumPPN += parseFloat($(`[name="${prefix}[sub_total_sebelum_ppn]"]`).val()) || 0;
-        let subTotalSetelahDisc = parseFloat($(`[name="${prefix}[sub_total_setelah_disc]"]`).val()) || 0;
-        let subTotalSblmPPN = parseFloat($(`[name="${prefix}[sub_total_sebelum_ppn]"]`).val()) || 0;
-        grandTotal += subTotalSetelahDisc;
+            subtotal += parseFloat($(`[name="${prefix}[sub_total_sblm_disc]"]`).val()) || 0;
+            totalDiskonItem += parseFloat($(`[name="${prefix}[total_diskon_item]"]`).val()) || 0;
+            subtotalSebelumPPN += parseFloat($(`[name="${prefix}[sub_total_sebelum_ppn]"]`).val()) || 0;
+            let subTotalSetelahDisc = parseFloat($(`[name="${prefix}[sub_total_setelah_disc]"]`).val()) || 0;
+            let subTotalSblmPPN = parseFloat($(`[name="${prefix}[sub_total_sebelum_ppn]"]`).val()) || 0;
+            grandTotal += subTotalSetelahDisc;
 
-        let ppnPerItem = subTotalSetelahDisc - subTotalSblmPPN;
-        totalPPN += ppnPerItem;
-    });
+            let ppnPerItem = subTotalSetelahDisc - subTotalSblmPPN;
+            totalPPN += ppnPerItem;
+        });
 
-    // Ambil diskon faktur & PPN tambahan (jika diisi user)
-    let diskonFaktur = parseFloat($('[name="diskon_faktur"]').val()) || 0;
-    let diskonPPN = parseFloat($('[name="diskon_ppn"]').val()) || 0;
+       
 
-    // Hitung grand total setelah diskon faktur dan diskon ppn (jika ada)
-    let grandTotalWithDiskon = grandTotal - (grandTotal * (diskonFaktur / 100)) + (grandTotal * (diskonPPN / 100));
+        // Ambil diskon faktur & PPN tambahan (jika diisi user)
+        let diskonFaktur = parseFloat($('[name="diskon_faktur"]').val()) || 0;
+        let diskonPPN = parseFloat($('[name="diskon_ppn"]').val()) || 0;
 
-    // Hitung total bayar (default = grandTotalWithDiskon)
-    let sisaTagihan = grandTotalWithDiskon;
+        // Hitung grand total setelah diskon faktur dan diskon ppn (jika ada)
+        let grandTotalWithDiskon = grandTotal - (grandTotal * (diskonFaktur / 100)) + (grandTotal * (diskonPPN / 100));
 
-    // Set value ke summary
-    $('[name="subtotal"]').val(subtotal.toFixed(2));
-    $('[name="diskon_item"]').val(totalDiskonItem.toFixed(2));
-    $('[name="subtotal_sebelum_ppn"]').val(subtotalSebelumPPN.toFixed(2));
-    $('[name="grand_total"]').val(grandTotalWithDiskon.toFixed(2));
-    $('[name="total_bayar"]').val(0);
-    $('[name="sisa_tagihan"]').val(sisaTagihan.toFixed(2));
+        // Hitung total bayar (default = grandTotalWithDiskon)
+        let sisaTagihan = grandTotalWithDiskon;
+         
+        
+
+        // Set value ke summary
+        $('[name="subtotal"]').val(subtotal);
+        $('#subtotal_display').val(subtotal.toLocaleString('id-ID'));
+        $('[name="diskon_item"]').val(totalDiskonItem);
+        $('#diskon_item_display').val(totalDiskonItem.toLocaleString('id-ID'));
+        $('[name="subtotal_sebelum_ppn"]').val(subtotalSebelumPPN);
+        $('#subtotal_sebelum_ppn_display').val(subtotalSebelumPPN.toLocaleString('id-ID'));
+        $('[name="grand_total"]').val(grandTotalWithDiskon);
+        $('#grand_total_display').val(grandTotalWithDiskon.toLocaleString('id-ID'));
+        // $('[name="total_bayar"]').val(0);
+        // $('#total_bayar_display').val(0);
+        $('[name="sisa_tagihan"]').val(sisaTagihan);
+        $('#sisa_tagihan_display').val(sisaTagihan.toLocaleString('id-ID'));
+
+        // jika invoice ada, ubah total bayar dan sisa tagihan sesuai nilai di db
+        @if($invoice)
+        let totalBayarDb = parseFloat({{ $invoice->total_bayar }}) || 0;
+        let sisaTagihanDb = parseFloat({{ $invoice->sisa_tagihan }}) || 0;
+        $('[name="total_bayar"]').val(totalBayarDb);
+        $('#total_bayar_display').val(totalBayarDb.toLocaleString('id-ID'));
+        $('[name="sisa_tagihan"]').val(sisaTagihanDb);
+        $('#sisa_tagihan_display').val(sisaTagihanDb.toLocaleString('id-ID'));
+        @endif
     }
 
 
-//    // Panggil updateSummary setiap ada perubahan di tabel item (add/remove), atau di field summary
-//     $('#review-items-table, #hidden-inputs-container').on('DOMSubtreeModified', updateSummary);
-// // Juga jika diskon faktur, diskon ppn, atau total_bayar berubah
+    //    // Panggil updateSummary setiap ada perubahan di tabel item (add/remove), atau di field summary
+    //     $('#review-items-table, #hidden-inputs-container').on('DOMSubtreeModified', updateSummary);
+    // // Juga jika diskon faktur, diskon ppn, atau total_bayar berubah
     $('[name="diskon_faktur"], [name="diskon_ppn"], [name="total_bayar"]').on('input keyup change', updateSummary);
 
-// Panggil pertama kali
+    // Panggil pertama kali
     updateSummary();
 
     // If term is set, update jatuh_tempo
@@ -204,6 +227,5 @@
             $('#term').val('');
         }
     });
-
 </script>
 @endpush
