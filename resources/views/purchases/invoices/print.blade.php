@@ -5,7 +5,7 @@
     <title>Faktur Pembelian - {{ $invoice->kode }}</title>
     <style>
         body {
-            font-family: 'Arial', sans-serif;
+            font-family: Arial, sans-serif;
             font-size: 14px;
         }
 
@@ -76,8 +76,7 @@
             </table>
         </div>
     </div>
-    <br>
-    <table class="noborder">
+    <table class="noborder" style="margin-top: 10px;">
         <thead>
             <tr>
                 <th>No.</th>
@@ -94,7 +93,7 @@
         </thead>
         <tbody>
             @foreach($invoice->items as $idx => $item)
-            <tr>
+            <tr style="font-size:15px;font-family:monospace;" >
                 <td class="text-end noborder">{{ $idx + 1 }}</td>
                 <td class="noborder">{{ $item->product->nama ?? '-' }}</td>
                 <td class="noborder">{{ $item->no_seri ?? '-' }}</td>
@@ -136,17 +135,17 @@
                         <td colspan="2"><b>Diperiksa Oleh,</b></td>
                     </tr>
                     <tr>
-                        <td style="width:50%; height:70px;  vertical-align:bottom; text-align:center; font-weight:bold; ">ADMIN</td>
-                        <td style="width:50%; height:70px; text-align:center; vertical-align:bottom; font-weight:bold; ">GUDANG</td>
+                        <td style="width:50%; height:74px;  vertical-align:bottom; text-align:center; font-weight:bold; ">ADMIN</td>
+                        <td style="width:50%; height:74px; text-align:center; vertical-align:bottom; font-weight:bold; ">GUDANG</td>
                     </tr>
                 </table>
             </td>
             <td style="width:52%; border-left:none; vertical-align:top; padding:0;">
                 <table style="width:100%; border-collapse:collapse;">
-                    <tr>
-                        <td style="border-bottom:1px solid; text-align:right; font-size:14px; font-weight:bold;" colspan="2">
+                    <tr style="font-family: monospace;">
+                        <td style="border-bottom:1px solid; text-align:right; font-size:17px; font-weight:bold;" colspan="2">
                             GRAND TOTAL
-                            <span style="font-size:15px; margin-left:28px;">{{ number_format($invoice->grand_total,0,',','.') }}</span>
+                            <span style="font-size:18px; margin-left:28px;">{{ number_format($invoice->grand_total,0,',','.') }}</span>
                         </td>
                     </tr>
                     <tr>
