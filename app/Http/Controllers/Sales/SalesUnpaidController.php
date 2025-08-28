@@ -40,6 +40,36 @@ class SalesUnpaidController extends Controller
             ->editColumn('sisa_tagihan', fn($row) => number_format($row->sisa_tagihan,2,',','.'))
             ->addColumn('customer', fn($row) => $row->customer->name ?? '')
             ->addColumn('alamat', fn($row) => $row->customer->alamat ?? '')
+            ->filterColumn('customer', function ($query, $keyword) {
+                $query->whereHas('customer', function ($q) use ($keyword) {
+                    $q->where('name', 'like', "%$keyword%");
+                });
+            })
+            ->filterColumn('alamat', function ($query, $keyword) {
+                $query->whereHas('customer', function ($q) use ($keyword) {
+                    $q->where('alamat', 'like', "%$keyword%");
+                });
+            }) 
+            ->filterColumn('nama_group', function ($query, $keyword) {
+                $query->whereHas('salesGroup', function ($q) use ($keyword) {
+                    $q->where('nama', 'like', "%$keyword%");
+                });
+            }) 
+            ->filterColumn('tanggal', function ($query, $keyword) {
+                $query->where('tanggal', 'like', "%$keyword%");
+            })
+            ->filterColumn('grand_total', function ($query, $keyword) {
+                $query->where('grand_total', 'like', "%" . str_replace(['.', ','], ['', '.'], $keyword) . "%");
+            })
+            ->filterColumn('total_bayar', function ($query, $keyword) {
+                $query->where('total_bayar', 'like', "%" . str_replace(['.', ','], ['', '.'], $keyword) . "%");
+            })
+            ->filterColumn('sisa_tagihan', function ($query, $keyword) {
+                $query->where('sisa_tagihan', 'like', "%" . str_replace(['.', ','], ['', '.'], $keyword) . "%");
+            })
+            ->filterColumn('kode', function ($query, $keyword) {
+                $query->where('kode', 'like', "%$keyword%");
+            })
             ->make(true);
     }
 

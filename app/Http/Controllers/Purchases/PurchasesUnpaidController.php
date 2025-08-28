@@ -39,6 +39,31 @@ class PurchasesUnpaidController extends Controller
             ->editColumn('sisa_tagihan', fn($row) => number_format($row->sisa_tagihan,2,',','.'))
             ->addColumn('supplier', fn($row) => $row->supplier->name ?? '')
             ->addColumn('alamat', fn($row) => $row->supplier->alamat ?? '')
+            ->filterColumn('supplier', function ($query, $keyword) {
+                $query->whereHas('supplier', function ($q) use ($keyword) {
+                    $q->where('name', 'like', "%$keyword%");
+                });
+            })
+            ->filterColumn('alamat', function ($query, $keyword) {
+                $query->whereHas('supplier', function ($q) use ($keyword) {
+                    $q->where('alamat', 'like', "%$keyword%");
+                });
+            }) 
+            ->filterColumn('tanggal', function ($query, $keyword) {
+                $query->where('tanggal', 'like', "%$keyword%");
+            }) 
+            ->filterColumn('kode', function ($query, $keyword) {
+                $query->where('kode', 'like', "%$keyword%");
+            })
+            ->filterColumn('grand_total', function ($query, $keyword) {
+                $query->where('grand_total', 'like', "%".str_replace(['.'], '', $keyword)."%");
+            })
+            ->filterColumn('total_bayar', function ($query, $keyword) {
+                $query->where('total_bayar', 'like', "%".str_replace(['.'], '', $keyword)."%");
+            })
+            ->filterColumn('sisa_tagihan', function ($query, $keyword) {
+                $query->where('sisa_tagihan', 'like', "%".str_replace(['.'], '', $keyword)."%");
+            })
             ->make(true);
     }
 

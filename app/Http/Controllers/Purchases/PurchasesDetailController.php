@@ -36,6 +36,49 @@ class PurchasesDetailController extends Controller
             ->addColumn('disc_1', fn($r) => number_format($r->diskon_1_rupiah, 2, ',', '.'))
             ->addColumn('disc_2', fn($r) => number_format($r->diskon_2_rupiah, 2, ',', '.'))
             ->addColumn('sub_total', fn($r) => number_format($r->sub_total_setelah_disc, 2, ',', '.'))
+            ->filterColumn('faktur_no', function ($query, $keyword) {
+                $query->whereHas('invoice', function ($q) use ($keyword) {
+                    $q->where('kode', 'like', "%$keyword%");
+                });
+            })
+            ->filterColumn('supplier', function ($query, $keyword) {
+                $query->whereHas('invoice.supplier', function ($q) use ($keyword) {
+                    $q->where('name', 'like', "%$keyword%");
+                });
+            })
+            ->filterColumn('product', function ($query, $keyword) {
+                $query->whereHas('product', function ($q) use ($keyword) {
+                    $q->where('nama', 'like', "%$keyword%");
+                });
+            }) 
+            ->filterColumn('alamat', function ($query, $keyword) {
+                $query->whereHas('invoice.supplier', function ($q) use ($keyword) {
+                    $q->where('address', 'like', "%$keyword%");
+                });
+            })
+            ->filterColumn('tanggal', function ($query, $keyword) {
+                $query->whereHas('invoice', function ($q) use ($keyword) {
+                    $q->where('tanggal', 'like', "%$keyword%");
+                });
+            })
+            ->filterColumn('harga', function ($query, $keyword) {
+                $query->where('harga_satuan', 'like', "%".str_replace(['.', ','], ['', '.'], $keyword)."%");
+            })
+            ->filterColumn('qty', function ($query, $keyword) {
+                $query->where('qty', 'like', "%$keyword%");
+            })
+            ->filterColumn('satuan', function ($query, $keyword) {
+                $query->where('satuan', 'like', "%$keyword%");
+            })
+            ->filterColumn('disc_1', function ($query, $keyword) {
+                $query->where('diskon_1_rupiah', 'like', "%".str_replace(['.', ','], ['', '.'], $keyword)."%");
+            })
+            ->filterColumn('disc_2', function ($query, $keyword) {
+                $query->where('diskon_2_rupiah', 'like', "%".str_replace(['.', ','], ['', '.'], $keyword)."%");
+            })
+            ->filterColumn('sub_total', function ($query, $keyword) {
+                $query->where('sub_total_setelah_disc', 'like', "%".str_replace(['.', ','], ['', '.'], $keyword)."%");
+            })
             ->rawColumns(['faktur_no'])
             ->make(true);
     }
