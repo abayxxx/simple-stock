@@ -109,9 +109,9 @@ class SalesDetailController extends Controller
             ->orderBy('product_id')
             ->get();
 
-        // Group by faktur_no
+        // Group by customer
         $grouped = $items->groupBy(function ($item) {
-            return $item->invoice->kode ?? '-';
+            return $item->invoice->customer->name ?? '-';
         });
 
         return Excel::download(new SalesDetailExport($grouped), 'FakturPenjualanDetail.xlsx');

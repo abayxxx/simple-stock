@@ -164,69 +164,62 @@
                     className: 'text-right'
                 },
             ],
-            drawCallback: function(settings) {
-                // Custom group header & subtotal inject
-                let api = this.api();
-                let rows = api.rows({
-                    page: 'current'
-                }).nodes();
-                let data = api.rows({
-                    page: 'current'
-                }).data();
+           drawCallback: function(settings) {
+            let api = this.api();
+            let rows = api.rows({ page: 'current' }).nodes();
+            let data = api.rows({ page: 'current' }).data();
 
-                let lastGroup = null;
-                let subtotalQty = 0,
-                    subtotalDisc1 = 0,
-                    subtotalDisc2 = 0,
-                    subtotalSubtotal = 0;
-                let grandQty = 0,
-                    grandDisc1 = 0,
-                    grandDisc2 = 0,
-                    grandSubtotal = 0;
+            let lastGroup = null;
+            let subtotalQty = 0,
+                subtotalDisc1 = 0,
+                subtotalDisc2 = 0,
+                subtotalSubtotal = 0;
+            let grandQty = 0,
+                grandDisc1 = 0,
+                grandDisc2 = 0,
+                grandSubtotal = 0;
 
-                data.each(function(row, i) {
-                    let group = row.faktur_no;
-                    let qty = Number(row.qty) || 0;
-                    let disc1 = Number(row.disc_1.replace(/\./g, '').replace(',', '.')) || 0;
-                    let disc2 = Number(row.disc_2.replace(/\./g, '').replace(',', '.')) || 0;
-                    let subtotal = Number(row.sub_total.replace(/\./g, '').replace(',', '.')) || 0;
+            data.each(function(row, i) {
+                // Ganti grouping dari faktur ke customer
+                let group = row.customer;
+                let qty = Number(row.qty.replace(/\./g, '').replace(',', '.')) || 0;
+                let disc1 = Number(row.disc_1.replace(/\./g, '').replace(',', '.')) || 0;
+                let disc2 = Number(row.disc_2.replace(/\./g, '').replace(',', '.')) || 0;
+                let subtotal = Number(row.sub_total.replace(/\./g, '').replace(',', '.')) || 0;
 
-                    if (lastGroup !== group) {
-                        // Set warna group header, toggle per faktur
-                        let groupClass = 'group-header-green';
-                        $(rows).eq(i).before(
-                            `<tr class="${groupClass}">
+                if (lastGroup !== group) {
+                    let groupClass = 'group-header-green';
+                    $(rows).eq(i).before(
+                        `<tr class="${groupClass}">
                             <td colspan="11">
-                                NO. : ${row.faktur_no}
+                                Customer: ${row.customer}
                             </td>
                         </tr>`
-                        );
+                    );
 
-                        // Reset subtotal
-                        subtotalQty = 0;
-                        subtotalDisc1 = 0;
-                        subtotalDisc2 = 0;
-                        subtotalSubtotal = 0;
-                    }
+                    // Reset subtotal per customer
+                    subtotalQty = 0;
+                    subtotalDisc1 = 0;
+                    subtotalDisc2 = 0;
+                    subtotalSubtotal = 0;
+                }
 
-                    // Tambahkan warna ke row item
-                    $(rows).eq(i).addClass('group-item-yellow');
+                $(rows).eq(i).addClass('group-item-yellow');
 
-                    subtotalQty += qty;
-                    subtotalDisc1 += disc1;
-                    subtotalDisc2 += disc2;
-                    subtotalSubtotal += subtotal;
-                    grandQty += qty;
-                    grandDisc1 += disc1;
-                    grandDisc2 += disc2;
-                    grandSubtotal += subtotal;
+                subtotalQty += qty;
+                subtotalDisc1 += disc1;
+                subtotalDisc2 += disc2;
+                subtotalSubtotal += subtotal;
+                grandQty += qty;
+                grandDisc1 += disc1;
+                grandDisc2 += disc2;
+                grandSubtotal += subtotal;
 
-                    // If next group, render subtotal
-                    let nextGroup = data[i + 1] ? data[i + 1].faktur_no : null;
-                    if (group !== nextGroup) {
-                        // Subtotal row
-                        $(rows).eq(i).after(
-                            `<tr class="subtotal-row">
+                let nextGroup = data[i + 1] ? data[i + 1].customer : null;
+                if (group !== nextGroup) {
+                    // Subtotal row per customer
+                    $(rows).eq(i).after(
+                        `<tr class="subtotal-row">
                             <td colspan="5" class="text-right">SUBTOTAL</td>
                             <td class="text-right">${subtotalQty.toLocaleString('id-ID')}</td>
                             <td></td>
@@ -235,17 +228,18 @@
                             <td class="text-right">${subtotalDisc2.toLocaleString('id-ID')}</td>
                             <td class="text-right">${subtotalSubtotal.toLocaleString('id-ID')}</td>
                         </tr>`
-                        );
-                    }
-                    lastGroup = group;
-                });
+                    );
+                }
+                lastGroup = group;
+            });
 
-                // Update grand total di tfoot
-                $('#grand-total-qty').text(grandQty.toLocaleString('id-ID'));
-                $('#grand-total-disc1').text(grandDisc1.toLocaleString('id-ID'));
-                $('#grand-total-disc2').text(grandDisc2.toLocaleString('id-ID'));
-                $('#grand-total-subtotal').text(grandSubtotal.toLocaleString('id-ID'));
-            }
+            // Grand total di footer
+            $('#grand-total-qty').text(grandQty.toLocaleString('id-ID'));
+            $('#grand-total-disc1').text(grandDisc1.toLocaleString('id-ID'));
+            $('#grand-total-disc2').text(grandDisc2.toLocaleString('id-ID'));
+            $('#grand-total-subtotal').text(grandSubtotal.toLocaleString('id-ID'));
+        }
+
         });
 
         $('#filter-form').on('submit', function(e) {

@@ -162,7 +162,21 @@
         // Hitung total bayar (default = grandTotalWithDiskon)
         let sisaTagihan = grandTotalWithDiskon;
          
-        
+        @if($invoice)
+        let totalBayarDb = parseFloat({{ $invoice->total_bayar }}) || 0;
+        let sisaTagihanDb = parseFloat({{ $invoice->sisa_tagihan }}) || 0;
+        $('[name="total_bayar"]').val(totalBayarDb);
+        $('#total_bayar_display').val(totalBayarDb.toLocaleString('id-ID'));
+        $('[name="sisa_tagihan"]').val(sisaTagihanDb);
+        $('#sisa_tagihan_display').val(sisaTagihanDb.toLocaleString('id-ID'));
+        @endif
+         
+        // check if total_bayar input has value > 0 and total_retur > 0, then recalculate sisa_tagihan
+        let totalBayarInput = parseFloat($('[name="total_bayar"]').val()) || 0;
+        let totalRetur = parseFloat({{$invoice->total_retur}}) || 0;
+        if (totalBayarInput > 0 || totalRetur > 0) {
+            sisaTagihan = grandTotalWithDiskon - totalBayarInput - totalRetur;
+        }
 
         // Set value ke summary
         $('[name="subtotal"]').val(subtotal);
@@ -178,15 +192,6 @@
         $('[name="sisa_tagihan"]').val(sisaTagihan);
         $('#sisa_tagihan_display').val(sisaTagihan.toLocaleString('id-ID'));
 
-        // jika invoice ada, ubah total bayar dan sisa tagihan sesuai nilai di db
-        @if($invoice)
-        let totalBayarDb = parseFloat({{ $invoice->total_bayar }}) || 0;
-        let sisaTagihanDb = parseFloat({{ $invoice->sisa_tagihan }}) || 0;
-        $('[name="total_bayar"]').val(totalBayarDb);
-        $('#total_bayar_display').val(totalBayarDb.toLocaleString('id-ID'));
-        $('[name="sisa_tagihan"]').val(sisaTagihanDb);
-        $('#sisa_tagihan_display').val(sisaTagihanDb.toLocaleString('id-ID'));
-        @endif
     }
 
 

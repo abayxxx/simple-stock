@@ -97,9 +97,9 @@ class PurchasesDetailController extends Controller
             ->orderBy('product_id')
             ->get();
 
-        // Group by faktur_no
+        // Group by supplier
         $grouped = $items->groupBy(function ($item) {
-            return $item->invoice->kode ?? '-';
+            return $item->invoice->supplier->name ?? '-';
         });
 
         return Excel::download(new PurchasesDetailExport($grouped), 'FakturPembelianDetail.xlsx');

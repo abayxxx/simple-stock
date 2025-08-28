@@ -44,7 +44,7 @@
                     <td>{{ $supplier->name ?? '' }}</td>
                     <td>{{ $supplier->alamat ?? '' }}</td>
                     <td>{{ $row->product->nama ?? '' }}</td>
-                    <td style="text-align:right;">{{ number_format($qty, 0, ',', '.') }}</td>
+                    <td style="text-align:right;">{{ number_format($qty, 2, ',', '.') }}</td>
                     <td>{{ $row->satuan ?? '' }}</td>
                     <td style="text-align:right;">{{ number_format($row->harga_satuan ?? 0, 2, ',', '.') }}</td>
                     <td style="text-align:right;">{{ number_format($disc1, 2, ',', '.') }}</td>
@@ -57,7 +57,7 @@
             {{-- Subtotal per faktur --}}
             <tr style="background: #efefef; font-weight:bold;">
                 <td colspan="5" style="text-align:right">SUBTOTAL</td>
-                <td style="text-align:right">{{ number_format($subQty, 0, ',', '.') }}</td>
+                <td style="text-align:right">{{ number_format($subQty, 2, ',', '.') }}</td>
                 <td></td>
                 <td></td>
                 <td style="text-align:right">{{ number_format($subDisc1, 2, ',', '.') }}</td>
@@ -68,7 +68,7 @@
         {{-- Grand total footer --}}
         <tr style="background: #f8f8f8; font-weight: bold;">
             <td colspan="5" style="text-align:right">GRAND TOTAL</td>
-            <td style="text-align:right">{{ number_format($grandQty, 0, ',', '.') }}</td>
+            <td style="text-align:right">{{ number_format($grandQty, 2, ',', '.') }}</td>
             <td></td>
             <td></td>
             <td style="text-align:right">{{ number_format($grandDisc1, 2, ',', '.') }}</td>

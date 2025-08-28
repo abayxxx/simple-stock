@@ -185,7 +185,7 @@
                     grandSubtotal = 0;
 
                 data.each(function(row, i) {
-                    let group = row.faktur_no;
+                    let group = row.supplier || '-';
                     let qty = Number(row.qty) || 0;
                     let disc1 = Number(row.disc_1.replace(/\./g, '').replace(',', '.')) || 0;
                     let disc2 = Number(row.disc_2.replace(/\./g, '').replace(',', '.')) || 0;
@@ -197,7 +197,7 @@
                         $(rows).eq(i).before(
                             `<tr class="${groupClass}">
                             <td colspan="11">
-                                NO. : ${row.faktur_no}
+                                NO. : ${row.supplier}
                             </td>
                         </tr>`
                         );
@@ -222,7 +222,7 @@
                     grandSubtotal += subtotal;
 
                     // If next group, render subtotal
-                    let nextGroup = data[i + 1] ? data[i + 1].faktur_no : null;
+                    let nextGroup = data[i + 1] ? data[i + 1].supplier : null;
                     if (group !== nextGroup) {
                         // Subtotal row
                         $(rows).eq(i).after(
