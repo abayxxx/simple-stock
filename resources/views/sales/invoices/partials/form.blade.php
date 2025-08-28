@@ -201,12 +201,9 @@
     // If term is set, update jatuh_tempo
     $('#term').on('input change', function() {
         let term = parseInt($(this).val());
-        console.log('Term changed:', term);
         if (!isNaN(term) && term > 0) {
             let tanggal = $('#tanggal').val();
-            console.log('Tanggal:', tanggal);
             if (tanggal) {
-                console.log('Term:', term, 'Tanggal:', tanggal);
                 let jatuhTempo = new Date(tanggal);
                 jatuhTempo.setDate(jatuhTempo.getDate() + term);
                 $('#jatuh_tempo').val(jatuhTempo.toISOString().split('T')[0]);

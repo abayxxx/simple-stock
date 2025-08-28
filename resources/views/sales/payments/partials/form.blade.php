@@ -84,7 +84,6 @@ $items = old('items', isset($payment) ? $payment->items->toArray() : []);
             $.get("{{ url('admin/sales/payments/tarik-nota-options') }}?company_profile_id=" + customerId, function(res) {
                 let rows = '';
                 res.invoices.forEach(inv => {
-                    console.log(inv);
                     rows += `<tr>
                     <td><input type="checkbox" class="nota-checkbox" value="${inv.id}" data-tipe-nota="FAKTUR" data-kode="${inv.kode}" data-tanggal="${inv.tanggal}" data-nilai="${inv.grand_total}" data-sisa="${inv.sisa_tagihan}" data-total-retur="${inv.total_retur}"></td>
                     <td>FAKTUR</td>

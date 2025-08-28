@@ -29,7 +29,7 @@ function isString(val) {
 function parseStringToFloat(text) {
   if (!text) return NaN;
   return parseFloat(
-    text.replace(/,/g, '')  // remove thousands
+    text.replace(/\./g, "")  // remove thousands
   );
 }
 
