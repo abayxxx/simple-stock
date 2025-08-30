@@ -10,12 +10,19 @@
     <form class="form-inline" id="filter-form">
         <input type="date" name="from" class="form-control mr-1" value="{{ request('from', date('Y-m-01')) }}">
         <input type="date" name="to" class="form-control mr-1" value="{{ request('to', date('Y-m-d')) }}">
+        <div class="col-12 col-sm-6 col-md-auto">
+                <select id="filter_customer" class="form-select w-100 form-control" name="customer_id">
+                    <option value="">Semua Customer</option>
+                </select>
+            </div>
         <button type="submit" class="btn btn-primary btn-sm">Filter</button>
         <a id="export-btn" href="#" class="btn btn-success btn-sm ml-1" target="_blank">
             <i class="fa fa-file-excel"></i> Export Excel
         </a>
+         <!-- Supplier -->
+            
     </form>
-</div>
+
 <div class="table-responsive">
     <table id="faktur-detail-table" class="table table-bordered table-sm" style="min-width: 1650px;">
         <thead>
@@ -112,6 +119,7 @@
                 data: function(d) {
                     d.from = $('[name="from"]').val();
                     d.to = $('[name="to"]').val();
+                    d.customer_id = $('#filter_customer').val();
                 }
             },
             columns: [{
@@ -181,7 +189,7 @@
 
             data.each(function(row, i) {
                 // Ganti grouping dari faktur ke customer
-                let group = row.customer;
+                let group = row.faktur_no;
                 let qty = Number(row.qty) || 0;
                 let disc1 = Number(row.disc_1.replace(/\./g, '').replace(',', '.')) || 0;
                 let disc2 = Number(row.disc_2.replace(/\./g, '').replace(',', '.')) || 0;
@@ -192,12 +200,12 @@
                     $(rows).eq(i).before(
                         `<tr class="${groupClass}">
                             <td colspan="11">
-                                Customer: ${row.customer}
+                                NO.: ${row.faktur_no}
                             </td>
                         </tr>`
                     );
 
-                    // Reset subtotal per customer
+                    // Reset subtotal per faktur_no
                     subtotalQty = 0;
                     subtotalDisc1 = 0;
                     subtotalDisc2 = 0;
@@ -215,9 +223,9 @@
                 grandDisc2 += disc2;
                 grandSubtotal += subtotal;
 
-                let nextGroup = data[i + 1] ? data[i + 1].customer : null;
+                let nextGroup = data[i + 1] ? data[i + 1].faktur_no : null;
                 if (group !== nextGroup) {
-                    // Subtotal row per customer
+                    // Subtotal row per faktur_no
                     $(rows).eq(i).after(
                         `<tr class="subtotal-row">
                             <td colspan="5" class="text-right">SUBTOTAL</td>
@@ -251,12 +259,37 @@
         function buildExportUrl() {
             let from = $('[name=from]').val();
             let to = $('[name=to]').val();
-            return "{{ route('sales.detail.export') }}" + "?from=" + from + "&to=" + to;
+            let customer_id = $('#filter_customer').val();
+            return "{{ route('sales.detail.export') }}" + "?from=" + from + "&to=" + to + "&customer_id=" + customer_id;
         }
         $('#export-btn').attr('href', buildExportUrl());
-        $('[name=from], [name=to]').on('change', function() {
+        $('[name=from], [name=to], [name=customer_id]').on('change', function() {
             $('#export-btn').attr('href', buildExportUrl());
         });
+
+        function loadFilterOptions() {
+            const awal = $('[name=from]').val();
+            const akhir = $('[name=to]').val();
+            // if (!awal || !akhir) {
+            //     // Optional: clear dropdowns if date range incomplete
+            //     return;
+            // }
+
+            $.get("{{ route('sales.invoices.filter-options') }}", {
+                awal,
+                akhir
+            }, function(res) {
+                // res: { customers: [{id,name}], locations: [{id,name}], sales_groups: [{id,nama}] }
+                const $sup = $('#filter_customer').empty().append('<option value="">Semua Customer</option>');
+                res.customers.forEach(o => $sup.append(`<option value="${o.id}">${o.name}</option>`));
+
+                // after refresh options, reload table with new filters
+                table.ajax.reload();
+            });
+        }
+
+         // optional: first load (if you want them empty until dates picked, you can skip this)
+        loadFilterOptions();
     });
 </script>
 @endpush

@@ -10,6 +10,11 @@
     <form class="form-inline" id="filter-form">
         <input type="date" name="from" class="form-control mr-1" value="{{ request('from', date('Y-m-01')) }}">
         <input type="date" name="to" class="form-control mr-1" value="{{ request('to', date('Y-m-d')) }}">
+        <div class="col-12 col-sm-6 col-md-auto">
+                <select id="filter_supplier" class="form-select w-100 form-control" name="supplier_id">
+                    <option value="">Semua Supplier</option>
+                </select>
+            </div>
         <button type="submit" class="btn btn-primary btn-sm">Filter</button>
         <a id="export-btn" href="#" class="btn btn-success btn-sm ml-1" target="_blank">
             <i class="fa fa-file-excel"></i> Export Excel
@@ -112,6 +117,7 @@
                 data: function(d) {
                     d.from = $('[name="from"]').val();
                     d.to = $('[name="to"]').val();
+                    d.supplier_id = $('#filter_supplier').val();
                 }
             },
             columns: [{
@@ -185,7 +191,7 @@
                     grandSubtotal = 0;
 
                 data.each(function(row, i) {
-                    let group = row.supplier || '-';
+                    let group = row.faktur_no || '-';
                     let qty = Number(row.qty) || 0;
                     let disc1 = Number(row.disc_1.replace(/\./g, '').replace(',', '.')) || 0;
                     let disc2 = Number(row.disc_2.replace(/\./g, '').replace(',', '.')) || 0;
@@ -197,7 +203,7 @@
                         $(rows).eq(i).before(
                             `<tr class="${groupClass}">
                             <td colspan="11">
-                                NO. : ${row.supplier}
+                                NO. : ${row.faktur_no}
                             </td>
                         </tr>`
                         );
@@ -222,7 +228,7 @@
                     grandSubtotal += subtotal;
 
                     // If next group, render subtotal
-                    let nextGroup = data[i + 1] ? data[i + 1].supplier : null;
+                    let nextGroup = data[i + 1] ? data[i + 1].faktur_no : null;
                     if (group !== nextGroup) {
                         // Subtotal row
                         $(rows).eq(i).after(
@@ -254,15 +260,40 @@
         });
 
         // Excel export
-        function buildExportUrl() {
+         function buildExportUrl() {
             let from = $('[name=from]').val();
             let to = $('[name=to]').val();
-            return "{{ route('purchases.detail.export') }}" + "?from=" + from + "&to=" + to;
+            let supplier_id = $('#filter_supplier').val();
+            return "{{ route('purchases.detail.export') }}" + "?from=" + from + "&to=" + to + "&supplier_id=" + supplier_id;
         }
         $('#export-btn').attr('href', buildExportUrl());
-        $('[name=from], [name=to]').on('change', function() {
+        $('[name=from], [name=to], [name=supplier_id]').on('change', function() {
             $('#export-btn').attr('href', buildExportUrl());
         });
+
+        function loadFilterOptions() {
+            const awal = $('[name=from]').val();
+            const akhir = $('[name=to]').val();
+            // if (!awal || !akhir) {
+            //     // Optional: clear dropdowns if date range incomplete
+            //     return;
+            // }
+
+            $.get("{{ route('purchases.invoices.filter-options') }}", {
+                awal,
+                akhir
+            }, function(res) {
+                // res: { customers: [{id,name}], locations: [{id,name}], sales_groups: [{id,nama}] }
+                const $sup = $('#filter_supplier').empty().append('<option value="">Semua Supplier</option>');
+                res.suppliers.forEach(o => $sup.append(`<option value="${o.id}">${o.name}</option>`));
+
+                // after refresh options, reload table with new filters
+                table.ajax.reload();
+            });
+        }
+
+         // optional: first load (if you want them empty until dates picked, you can skip this)
+        loadFilterOptions();
     });
 </script>
 @endpush

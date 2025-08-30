@@ -22,6 +22,7 @@ class SalesDetailController extends Controller
             ->whereHas('invoice', function ($q) use ($request) {
                 if ($request->from) $q->whereDate('tanggal', '>=', $request->from . ' 00:00:00');
                 if ($request->to) $q->whereDate('tanggal', '<=', $request->to . ' 23:59:59');
+                if ($request->customer_id) $q->where('company_profile_id', $request->customer_id);
             });
 
         return DataTables::of($query)
@@ -99,11 +100,16 @@ class SalesDetailController extends Controller
     {
         $from = $request->input('from', date('Y-m-01'));
         $to   = $request->input('to', date('Y-m-d'));
+        $customer_id = $request->input('customer_id');
 
         // Query item join invoice, customer, product, (bisa pakai with atau join)
         $items = SalesInvoiceItem::with(['invoice.customer', 'product'])
-            ->whereHas('invoice', function ($q) use ($from, $to) {
+            ->whereHas('invoice', function ($q) use ($from, $to, $customer_id) {
                 $q->whereBetween('tanggal', [$from . ' 00:00:00', $to . ' 23:59:59']);
+                if ($customer_id) {
+                    $q->where('company_profile_id', $customer_id);
+                }
+
             })
             ->orderBy('sales_invoice_id')
             ->orderBy('product_id')
@@ -111,7 +117,7 @@ class SalesDetailController extends Controller
 
         // Group by customer
         $grouped = $items->groupBy(function ($item) {
-            return $item->invoice->customer->name ?? '-';
+            return $item->invoice->kode ?? '-';
         });
 
         return Excel::download(new SalesDetailExport($grouped), 'FakturPenjualanDetail.xlsx');

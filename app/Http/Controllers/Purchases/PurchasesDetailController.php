@@ -22,6 +22,7 @@ class PurchasesDetailController extends Controller
             ->whereHas('invoice', function ($q) use ($request) {
                 if ($request->from) $q->whereDate('tanggal', '>=', $request->from . ' 00:00:00');
                 if ($request->to) $q->whereDate('tanggal', '<=', $request->to . ' 23:59:59');
+                if ($request->supplier_id) $q->where('company_profile_id', $request->supplier_id);
             });
 
         return DataTables::of($query)
@@ -87,11 +88,15 @@ class PurchasesDetailController extends Controller
     {
         $from = $request->input('from', date('Y-m-01'));
         $to   = $request->input('to', date('Y-m-d'));
+        $supplier_id = $request->input('supplier_id');
 
         // Query item join invoice, supplier, product, (bisa pakai with atau join)
         $items = PurchasesInvoiceItem::with(['invoice.supplier', 'product'])
-            ->whereHas('invoice', function ($q) use ($from, $to) {
+            ->whereHas('invoice', function ($q) use ($from, $to, $supplier_id) {
                 $q->whereBetween('tanggal', [$from . ' 00:00:00', $to . ' 23:59:59']);
+                if ($supplier_id) {
+                    $q->where('company_profile_id', $supplier_id);
+                }
             })
             ->orderBy('purchases_invoice_id')
             ->orderBy('product_id')
@@ -99,7 +104,7 @@ class PurchasesDetailController extends Controller
 
         // Group by supplier
         $grouped = $items->groupBy(function ($item) {
-            return $item->invoice->supplier->name ?? '-';
+            return $item->invoice->kode ?? '-';
         });
 
         return Excel::download(new PurchasesDetailExport($grouped), 'FakturPembelianDetail.xlsx');
