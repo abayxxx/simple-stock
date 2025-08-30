@@ -131,6 +131,8 @@
         let subtotalSebelumPPN = 0;
         let totalPPN = 0;
         let grandTotal = 0;
+        let totalRetur = 0;
+        let totalBayarInput = 0;
 
         // Loop semua baris di tabel (setiap item yang akan disubmit)
         $('#review-items-table tbody tr').each(function() {
@@ -169,11 +171,11 @@
         $('#total_bayar_display').val(totalBayarDb.toLocaleString('id-ID'));
         $('[name="sisa_tagihan"]').val(sisaTagihanDb);
         $('#sisa_tagihan_display').val(sisaTagihanDb.toLocaleString('id-ID'));
+        totalRetur = parseFloat({{$invoice->total_retur}}) || 0;
+        totalBayarInput = totalBayarDb || 0;
         @endif
          
         // check if total_bayar input has value > 0 and total_retur > 0, then recalculate sisa_tagihan
-        let totalBayarInput = parseFloat($('[name="total_bayar"]').val()) || 0;
-        let totalRetur = parseFloat({{$invoice->total_retur}}) || 0;
         if (totalBayarInput > 0 || totalRetur > 0) {
             sisaTagihan = grandTotalWithDiskon - totalBayarInput - totalRetur;
         }
