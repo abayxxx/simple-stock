@@ -182,7 +182,7 @@
             data.each(function(row, i) {
                 // Ganti grouping dari faktur ke customer
                 let group = row.customer;
-                let qty = Number(row.qty.replace(/\./g, '').replace(',', '.')) || 0;
+                let qty = Number(row.qty) || 0;
                 let disc1 = Number(row.disc_1.replace(/\./g, '').replace(',', '.')) || 0;
                 let disc2 = Number(row.disc_2.replace(/\./g, '').replace(',', '.')) || 0;
                 let subtotal = Number(row.sub_total.replace(/\./g, '').replace(',', '.')) || 0;
